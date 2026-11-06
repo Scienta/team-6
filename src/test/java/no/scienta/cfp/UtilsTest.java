@@ -41,6 +41,21 @@ class UtilsTest {
         assertEquals(4.5, Utils.roundRating(4.5));
     }
 
+    // Spring Boot 4 pin P3 (workflow/specs/spring-boot-4.md): the Ratings spec wants exactly one ordinary space
+    // before AM/PM. JDK 20+ locale data puts a narrow no-break space (U+202F) there, so compare byte for byte.
+    @Test
+    void usShortIsByteExact() {
+        assertEquals("11/4/26, 1:05 PM", Utils.usShort(utc("2026-11-04 13:05:59")));
+        assertEquals("11/4/26, 12:00 AM", Utils.usShort(utc("2026-11-04 00:00:00")));
+        assertEquals("11/4/26, 12:00 PM", Utils.usShort(utc("2026-11-04 12:00:00")));
+        assertEquals("1/2/26, 9:07 AM", Utils.usShort(utc("2026-01-02 09:07:00")));
+        assertEquals("12/31/26, 11:59 PM", Utils.usShort(utc("2026-12-31 23:59:00")));
+    }
+
+    private static Date utc(String dateTime) {
+        return Utils.parse(dateTime);
+    }
+
     @Disabled("flaky on Jenkins")
     @Test
     void nowIsCurrentTime() {

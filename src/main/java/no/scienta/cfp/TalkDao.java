@@ -27,7 +27,7 @@ public class TalkDao {
         t.speakerId = rs.getLong("speaker_id");
         long millis = rs.getLong("submitted_at");
         t.submittedAt = new Date(millis);
-        t.submittedOn = Utils.toSqlDate(millis);
+        t.submittedOn = Utils.utcDay(millis);
         return t;
     };
 

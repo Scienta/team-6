@@ -7,7 +7,7 @@ import java.sql.Statement;
 import java.util.UUID;
 
 import org.springframework.test.context.DynamicPropertyRegistry;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * A throwaway Postgres database per test class. One container is started for the whole test run, and each call to
@@ -17,7 +17,7 @@ final class TestDatabase {
 
     // Reused across test runs when ~/.testcontainers.properties has testcontainers.reuse.enable=true; otherwise a fresh
     // container per run, as before. Remove a reused one with: docker rm -f $(docker ps -q --filter label=org.testcontainers.reuse.hash)
-    private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine").withReuse(true);
+    private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine").withReuse(true);
 
     private TestDatabase() {
     }
@@ -31,7 +31,7 @@ final class TestDatabase {
     }
 
     /** Points the app at a database through the deploy contract's PG* variables, as on Scaleway. */
-    static void pointAt(DynamicPropertyRegistry registry, PostgreSQLContainer<?> postgres, String database) {
+    static void pointAt(DynamicPropertyRegistry registry, PostgreSQLContainer postgres, String database) {
         registry.add("PGHOST", postgres::getHost);
         registry.add("PGPORT", () -> postgres.getMappedPort(5432));
         registry.add("PGDATABASE", () -> database);

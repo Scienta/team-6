@@ -39,19 +39,20 @@ public class Utils {
     }
 
     /**
-     * Epoch millis to a date-only java.sql.Date (UTC day).
+     * Epoch millis to its UTC day, "2026-11-04".
      */
-    public static java.sql.Date toSqlDate(long millis) {
+    public static String utcDay(long millis) {
         SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd");
         f.setTimeZone(UTC);
-        return java.sql.Date.valueOf(f.format(new Date(millis)));
+        return f.format(new Date(millis));
     }
 
     /**
-     * "11/4/26, 1:05 PM", what the reviewer UI shows.
+     * "11/4/26, 1:05 PM", what the reviewer UI shows. An explicit pattern, not DateFormat.SHORT: JDK 20+ locale data
+     * puts a narrow no-break space (U+202F) before AM/PM, and the Ratings spec wants one ordinary space.
      */
     public static String usShort(Date d) {
-        DateFormat f = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.US);
+        SimpleDateFormat f = new SimpleDateFormat("M/d/yy, h:mm a", Locale.US);
         f.setTimeZone(UTC);
         return f.format(d);
     }

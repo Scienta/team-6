@@ -12,8 +12,10 @@
 - Push to `main` only when the user asks: a push deploys the scored service.
 - `specs/` holds the organisers' text, untouched. Our decisions go in `workflow/specs/<slug>.md`,
   plans in `workflow/plans/<slug>.md`, examples in `examples/<slug>.hurl`.
-- Code style: Java 11 / Spring Boot 2.7 as in the codebase (`JdbcTemplate`, `ResponseStatusException`,
-  Controller → `ConferenceService` → DAO). The `fluent-java` skill targets Java 21+ and doesn't
-  apply here.
+- Code style: Java 25 / Spring Boot 4.1 (since the spring-boot-4 upgrade), in the codebase's existing
+  style (`JdbcTemplate`, `ResponseStatusException`, Controller → `ConferenceService` → DAO).
+- Formats the specs fix (dates, `ratedAtDisplay`, trailing slashes, JSON leniency) are written
+  explicitly in our code, never left to JVM, locale or Jackson defaults; `UpgradeContractTest` and
+  `examples/spring-boot-4.hurl` pin them. See `workflow/specs/spring-boot-4.md`.
 - `REVIEW.md` is a running log: add the claim log row when a person claims, and a section 4 entry
   when the harness catches something we missed.
