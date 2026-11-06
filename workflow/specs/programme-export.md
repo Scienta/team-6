@@ -32,6 +32,8 @@ Both endpoints are read-only: `200`, except `406` for `GET /programme` when the 
 | `"; "` inside a speaker name; a field that starts with `=` `+` `-` `@` | written as it is (the spec has no escaping) | D2054, D2055 |
 | `Content-Disposition` on the CSV (PO-4) | `attachment; filename=programme.csv` | D2056 |
 | trailing slash | works (`TrailingSlashConfig`) | D2084 |
+| `GET /programme` with `Accept: text/*` | `406` (no JSON in it); `application/*` → JSON (review finding, tested) | D2053 |
+| a speaker name with `,` `"` or a line break | the whole `speakers` field is quoted (tested) | D2008 |
 
 ## Product owner answers
 

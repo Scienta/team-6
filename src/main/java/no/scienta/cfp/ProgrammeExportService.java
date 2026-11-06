@@ -34,7 +34,9 @@ public class ProgrammeExportService {
         return rows;
     }
 
-    /// RFC 4180 with Unix line endings (D2007–D2010): the header, one line per row, every line ending in `\n`.
+    /// RFC 4180 with Unix line endings (D2007–D2010): the header, one line per row, every line ending in `\n`. Its own
+    /// read-only transaction: `rows()` is called from inside this class, so its annotation doesn't apply here.
+    @Transactional(readOnly = true)
     public String csv() {
         StringBuilder out = new StringBuilder(CSV_HEADER).append('\n');
         for (ProgrammeRow r : rows()) {

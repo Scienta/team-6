@@ -1,7 +1,6 @@
 package no.scienta.cfp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
@@ -53,18 +52,25 @@ class ProgrammeExportTest {
 
     // ------------------------------------------------------------ helpers
 
-    /** An accepted talk by a speaker with this name, through the API (rated twice, accepted). */
+    // Fixtures straight into the database: the export only reads, so how a talk got accepted doesn't matter here
+    // (acceptance has its own tests). Placing, co-speakers, renaming and withdrawing still go through the API.
+
+    /** An accepted talk with this title by an existing speaker. */
     private long accepted(long speaker, String title, String format) {
-        // Api's JSON helper only escapes quotes; line breaks in a title must be JSON-escaped here
-        long talk = api.talk(speaker, title.replace("\r", "\\r").replace("\n", "\\n"), format, "BEGINNER");
-        api.rate(talk, 1, 4);
-        api.rate(talk, 2, 5);
-        assertEquals(200, api.decide(talk, "ACCEPTED").status);
-        return talk;
+        return jdbc.queryForObject("INSERT INTO talk (title, format, duration, level, status, speaker_id, submitted_at) "
+                + "VALUES (?, ?, 45, 'BEGINNER', 'ACCEPTED', ?, ?) RETURNING id",
+                Long.class, title, format, speaker, System.currentTimeMillis());
     }
 
+    /** An accepted talk with this title by a new speaker with this name. */
     private long accepted(String speakerName, String title) {
-        return accepted(api.speaker(speakerName), title, "PRESENTATION");
+        return accepted(speaker(speakerName), title, "PRESENTATION");
+    }
+
+    /** A speaker with this name (any characters: no JSON escaping needed). */
+    private long speaker(String name) {
+        return jdbc.queryForObject("INSERT INTO speaker (name, email) VALUES (?, ?) RETURNING id", Long.class,
+                name, "export-" + java.util.UUID.randomUUID() + "@example.com");
     }
 
     private void place(String room, String slot, long talk) {
@@ -143,10 +149,10 @@ class ProgrammeExportTest {
 
     @Test
     void speakersMainFirstThenCoSpeakers() {
-        long main = api.speaker("Grace Hopper");
+        long main = speaker("Grace Hopper");
         long talk = accepted(main, "Pairing", "PRESENTATION");
-        long ada = api.speaker("Ada Lovelace");
-        long alan = api.speaker("Alan Turing");
+        long ada = speaker("Ada Lovelace");
+        long alan = speaker("Alan Turing");
         assertEquals(200, api.send("PUT", "/talks/" + talk + "/co-speakers/" + alan, null).status);
         assertEquals(200, api.send("PUT", "/talks/" + talk + "/co-speakers/" + ada, null).status);
         place("R1", "S1", talk);
@@ -156,10 +162,10 @@ class ProgrammeExportTest {
 
     @Test
     void showsTalksAndSpeakersAsTheyAreNow() {
-        long main = api.speaker("Grace Hopper");
+        long main = speaker("Grace Hopper");
         long talk = accepted(main, "Pairing", "PRESENTATION");
         place("R1", "S1", talk);
-        long ada = api.speaker("Ada Lovelace");
+        long ada = speaker("Ada Lovelace");
         assertEquals(200, api.send("PUT", "/talks/" + talk + "/co-speakers/" + ada, null).status);
         Api.Res speaker = api.get("/speakers/" + main);
         Api.Res renamed = api.send("PUT", "/speakers/" + main,
@@ -176,18 +182,21 @@ class ProgrammeExportTest {
         long multiline = accepted("Bjørn", "Line one\nline two");
         long crlf = accepted("Carl", "Windows\r\nline");
         long plain = accepted("Dora", "Plain 'title'; with semicolon");
+        long loneCr = accepted("Hopper, Grace \"Amazing\"", "Old Mac\rline");
         place("R1", "S1", quoted);
         place("R2", "S1", multiline);
         place("R3", "S1", crlf);
         place("R1", "S2", plain);
+        place("R2", "S2", loneCr);
         String expected = HEADER
                 + "S1,09:00,10:00,R1," + quoted + ",\"Kotlin, \"\"really\"\" fast\",PRESENTATION,Åse Ødegård\n"
                 + "S1,09:00,10:00,R2," + multiline + ",\"Line one\nline two\",PRESENTATION,Bjørn\n"
                 + "S1,09:00,10:00,R3," + crlf + ",\"Windows\r\nline\",PRESENTATION,Carl\n"
-                + "S2,10:15,11:15,R1," + plain + ",Plain 'title'; with semicolon,PRESENTATION,Dora\n";
+                + "S2,10:15,11:15,R1," + plain + ",Plain 'title'; with semicolon,PRESENTATION,Dora\n"
+                // a lone \r is a line break too; a speaker name with a comma and quotes quotes the speakers field
+                + "S2,10:15,11:15,R2," + loneCr + ",\"Old Mac\rline\",PRESENTATION,\"Hopper, Grace \"\"Amazing\"\"\"\n";
         HttpResponse<byte[]> r = get("/programme.csv", null);
         assertEquals(expected, new String(r.body(), StandardCharsets.UTF_8));
-        assertFalse(r.body().length >= 3 && (r.body()[0] & 0xff) == 0xEF, "no UTF-8 BOM");
     }
 
     // PO-2: text/csv with the charset; PO-4: a download filename. R6: also when the client asks for JSON.
@@ -208,10 +217,12 @@ class ProgrammeExportTest {
     @Test
     void jsonViewIs406WhenTheClientWontTakeJson() {
         assertEquals(406, get("/programme", "text/csv").statusCode());
-        for (String accept : new String[] {null, "*/*", "application/json", "text/csv, application/json"}) {
+        assertEquals(406, get("/programme", "text/*").statusCode());
+        for (String accept : new String[] {null, "*/*", "application/*", "application/json", "text/csv, application/json"}) {
             HttpResponse<byte[]> r = get("/programme", accept);
             assertEquals(200, r.statusCode(), "Accept: " + accept);
             assertTrue(r.headers().firstValue("Content-Type").orElse("").startsWith("application/json"), "Accept: " + accept);
+            assertEquals("[]", new String(r.body(), StandardCharsets.UTF_8), "Accept: " + accept);
         }
         assertEquals(200, get("/programme/", null).statusCode(), "trailing slash");
     }
@@ -220,27 +231,35 @@ class ProgrammeExportTest {
 
     @Test
     void jsonAndCsvAgree() {
+        long withCo = accepted("Grace, \"G\" Hopper", "Beta, \"with\" comma");
+        assertEquals(200, api.send("PUT", "/talks/" + withCo + "/co-speakers/" + speaker("Ada; Lovelace"), null).status);
         place("R2", "S3", accepted("A", "Alpha"));
-        place("R1", "S3", accepted("B", "Beta, with comma"));
+        place("R1", "S3", withCo);
         place("R3", "S1", accepted("C", "Gamma"));
-        List<String> jsonLines = new ArrayList<>();
+        place("R1", "S5", accepted("D", "Delta"));
+        // Every JSON row, rendered as CSV by this test's own quoting, must be the CSV's line at the same position
+        StringBuilder expected = new StringBuilder(HEADER);
         List<Map<String, Object>> rows = json().at("$");
         for (Map<String, Object> row : rows) {
-            jsonLines.add(row.get("slot") + "|" + row.get("room") + "|" + row.get("talkId"));
+            @SuppressWarnings("unchecked")
+            List<String> speakers = (List<String>) row.get("speakers");
+            List<String> fields = List.of((String) row.get("slot"), (String) row.get("start"), (String) row.get("end"),
+                    (String) row.get("room"), String.valueOf(row.get("talkId")), (String) row.get("title"),
+                    (String) row.get("format"), String.join("; ", speakers));
+            expected.append(String.join(",", fields.stream().map(ProgrammeExportTest::quote).toList())).append('\n');
         }
-        List<String> csvLines = new ArrayList<>();
-        String[] lines = csv().split("\n");
-        for (int i = 1; i < lines.length; i++) {
-            String[] f = lines[i].split(",");
-            csvLines.add(f[0] + "|" + f[3] + "|" + f[4]);
-        }
-        assertEquals(jsonLines, csvLines, "same rows, same order");
+        assertEquals(4, rows.size());
+        assertEquals(expected.toString(), csv(), "same rows, same order, same values");
+    }
+
+    private static String quote(String v) {
+        return v.matches("(?s).*[,\"\r\n].*") ? "\"" + v.replace("\"", "\"\"") + "\"" : v;
     }
 
     // PO-1: a withdrawn talk still on the programme is listed, as the spec says
     @Test
     void withdrawnTalkStaysListed() {
-        long speaker = api.speaker("Grace Hopper");
+        long speaker = speaker("Grace Hopper");
         long talk = accepted(speaker, "Leaving", "PRESENTATION");
         place("R1", "S1", talk);
         assertEquals(200, api.withdraw(talk, speaker).status);

@@ -118,7 +118,7 @@ class SchedulingTest {
                 {"S4", "13:30", "15:30"}, {"S5", "15:45", "16:45"}};
         for (String room : List.of("R1", "R2", "R3")) {
             for (String[] s : slots) {
-                long talk = accepted();
+                long talk = acceptedRow(); // SQL fixture: this test is about rooms, slots and times, not acceptance
                 assertEntry(put(room, s[0], talk), room, s[0], s[1], s[2], talk);
                 assertEntry(get(room, s[0]), room, s[0], s[1], s[2], talk);
             }
