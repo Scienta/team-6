@@ -41,13 +41,15 @@ public class ConferenceService {
     private final SpeakerDao speakerDao;
     private final TalkDao talkDao;
     private final RatingDao ratingDao;
+    private final CoSpeakerDao coSpeakerDao;
     private final NotificationService notifications;
 
     public ConferenceService(SpeakerDao speakerDao, TalkDao talkDao, RatingDao ratingDao,
-                             NotificationService notifications) {
+                             CoSpeakerDao coSpeakerDao, NotificationService notifications) {
         this.speakerDao = speakerDao;
         this.talkDao = talkDao;
         this.ratingDao = ratingDao;
+        this.coSpeakerDao = coSpeakerDao;
         this.notifications = notifications;
     }
 
@@ -162,7 +164,7 @@ public class ConferenceService {
         if (talk == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "talk not found");
         }
-        addRatings(talk);
+        enrich(talk);
         return talk;
     }
 
@@ -172,7 +174,7 @@ public class ConferenceService {
         }
         List<TalkDto> talks = talkDao.findBySpeaker(speakerId);
         for (TalkDto t : talks) {
-            addRatings(t);
+            enrich(t);
         }
         return talks;
     }
@@ -183,7 +185,7 @@ public class ConferenceService {
         }
         List<TalkDto> talks = speakerId == null ? talkDao.findAll() : talkDao.findBySpeaker(speakerId);
         for (TalkDto t : talks) {
-            addRatings(t);
+            enrich(t);
         }
         if ("rating".equals(sort)) {
             List<TalkDto> rated = new ArrayList<>();
@@ -212,7 +214,9 @@ public class ConferenceService {
         return talks;
     }
 
-    private void addRatings(TalkDto talk) {
+    /** Fills in what other features add to every talk shown: ratings and co-speakers. */
+    private void enrich(TalkDto talk) {
+        talk.coSpeakerIds = coSpeakerDao.findByTalk(talk.id);
         Map<String, Object> stats = ratingDao.stats(talk.id);
         int count = ((Number) stats.get("cnt")).intValue();
         long total = ((Number) stats.get("total")).longValue();
@@ -224,6 +228,44 @@ public class ConferenceService {
     private Double calculateAverage(long total, int count) {
         return BigDecimal.valueOf(total).divide(BigDecimal.valueOf(count), 1, RoundingMode.HALF_UP).doubleValue();
         // return Utils.roundRating((double) total / count);
+    }
+
+    // ---------------------------------------------------------------- co-speakers
+
+    /**
+     * Adds a co-speaker (at most 2, never the main speaker; adding one twice changes nothing). The talk row is locked
+     * first, so concurrent adds to the same talk can't both see room for one more.
+     */
+    @Transactional
+    public TalkDto addCoSpeaker(long talkId, long speakerId) {
+        Long mainSpeaker = coSpeakerDao.lockTalk(talkId);
+        if (mainSpeaker == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "talk not found");
+        }
+        if (!speakerDao.exists(speakerId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "speaker not found");
+        }
+        if (mainSpeaker == speakerId) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "the main speaker can't be a co-speaker of their own talk");
+        }
+        List<Long> current = coSpeakerDao.findByTalk(talkId);
+        if (!current.contains(speakerId)) {
+            if (current.size() >= 2) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "a talk has at most 2 co-speakers");
+            }
+            coSpeakerDao.add(talkId, speakerId);
+        }
+        return getTalk(talkId);
+    }
+
+    /** Removes a co-speaker. Removing someone who isn't one changes nothing. */
+    @Transactional
+    public TalkDto removeCoSpeaker(long talkId, long speakerId) {
+        if (coSpeakerDao.lockTalk(talkId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "talk not found");
+        }
+        coSpeakerDao.remove(talkId, speakerId);
+        return getTalk(talkId);
     }
 
     // ---------------------------------------------------------------- statistics
