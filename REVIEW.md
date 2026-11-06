@@ -57,6 +57,8 @@ claimed or skipped, at which tick, and the evidence you held before claiming. Fo
 
 | Feature | Claimed or skipped | Tick | Evidence before claiming |
 |---|---|---|---|
+| co-speakers | claimed | 70 | Our spec decisions in [workflow/specs/co-speakers.md](workflow/specs/co-speakers.md). `examples/co-speakers.hurl` green against the live URL. [workflow/scripts/co-speakers-race.sh](workflow/scripts/co-speakers-race.sh) green **live**: 10 different speakers added at once give exactly 2 co-speakers (2×200, 8×409), 5 identical adds give one entry, 5 identical deletes give one 200 and four 404. Before claiming we also read the harness's own co-speaker traffic in our request log (it probes unclaimed features): no 500s, and the codes matched our decisions. Still missed check-2 (see §4) |
+| acceptance | claimed | 107 | The harness's spec was identical to our copy, and every rule R1-R9 had a decision and a test (`AcceptanceTest`, 13 tests, including two concurrency tests). `examples/acceptance.hurl` green live. About 350 acceptance requests from the harness in our logs, with no 500s. A **live** race test: 5 rounds of 5 ACCEPTED + 5 REJECTED + 2 withdrawals on one talk at once. Every round ended in one allowed state (accept and reject never both won, at most one withdrawal), and the rounds happened to cover all three orders. Still missed check-3/check-5 (see §4) |
 | spring-boot-4 | claimed | 98 | Spec and plan: [workflow/specs/spring-boot-4.md](workflow/specs/spring-boot-4.md), [workflow/plans/spring-boot-4.md](workflow/plans/spring-boot-4.md). 20 pinned behaviours (P1-P20: `UpgradeContractTest`, `UtilsTest#usShortIsByteExact`, `examples/spring-boot-4.hurl`), green on Boot 2.7 before the upgrade and on 4.1.2 / Java 25 after. `verify.sh` green on JDK 25 (96 tests, 7 Hurl files, 137 requests). The production image built locally passed every Hurl file. An independent review agent compared about 140 identical requests against the old and new jars. Deployed `4e7a533`: `/actuator/info` reports `4.1.2` / `25.0.5`, Hurl green against the live URL. Harness after the claim: spring-boot-4 2/2 OK, base features all OK from tick 100 |
 
 ## 4. What the harness caught that we didn't
@@ -90,6 +92,43 @@ speaker email, is `409`. *Lesson:* this is the second time a PO answer that went
 precedent was wrong (after co-speakers PO-2). The `/verify-feature` 3b check found the risk but only
 logged it. Next time, when a PO answer contradicts a harness-verified precedent, say so before
 building on it, and offer the precedent as the default.
+
+**Acceptance check-3 and check-5: a repeated decision (FAULTY ticks 108-110, fixed tick 111).** Accept
+a talk, then `PUT … {"status":"ACCEPTED"}` again: we answered `200` (acceptance PO-1, "the same decision
+again is harmless"), and both checks stopped on exactly that request. The spec says the committee's
+decision is final and a decision that isn't allowed changes nothing. A repeat isn't an allowed
+transition, so it's now `409`, unchanged. *Why we missed it:* the live race test we ran before claiming
+proved the state machine never ends in a bad state, but our tests *encoded* PO-1, so they couldn't
+question it. *Lesson:* this is the **third** time "the product owner said `200`, nothing changes" was
+wrong against the harness (co-speakers PO-2, acceptance PO-1, workshop PO-3). Each time the harness
+wanted a refusal that changes nothing. Treat "changes nothing" as *refuse it* (`409`/`400`) by default.
+
+**`GET /talks` took 12-20 s live and starved the other requests (about tick 40-103, fixed in `a1f2050`).**
+Every talk shown cost 2 more queries (ratings, co-speakers), and the harness adds about 40 talks per
+tick. With ~3000 talks the list took 20 s and held connections from the pool of 5. Meanwhile other
+checks' `POST /speakers` got **no answer** (`status: null` in talks and ratings transcripts, ticks 47,
+67, 73). Lost points climbed to 31. *Why we missed it at first:* every test ran on a near-empty
+database, where it takes milliseconds. We did catch it ourselves with a `duration < 3000` Hurl
+assertion against the live URL, but the fix was lost in a working-tree reset and shipped late. Now
+2 queries per list (one `GROUP BY talk_id`, one `talk_id = ANY(?)`). With 3224 talks locally:
+0.5-0.9 s → 0.04 s, responses byte-identical. Live: 19.6 s → 0.9 s. Guarded by
+[examples/performance.hurl](examples/performance.hurl).
+
+**Every deploy cost a tick (ticks 109, 114, 119; about 45 points).** Each push to `main` redeployed,
+docs included: six restarts in 14 minutes, and each container needs ~30 s before it answers. Checks
+that hit the swap got no response, in every feature at once. Now `deploy.yml` has `paths-ignore` for
+`*.md`, `workflow/`, `.claude/`, `specs/`, `examples/` and `.github/`, so only code pushes deploy, and
+`harness.sh health` compares with the last *deployable* commit. Code pushes still cost a tick: batch them.
+
+**Caught by us before the harness (no check covered them):**
+- **500 emojis didn't fit a 500-character bio.** `@Size` counts UTF-16 units, and an emoji is two of
+  them, so 500 × 😀 got `400`. Now counted in code points (`SpeakerForm`, `SpeakerFormTest`,
+  [examples/speakers-bio.hurl](examples/speakers-bio.hurl): red live before, green after).
+- **SQL injection in `GET /speakers/search`** (the admin search pasted `q` into the SQL): `' OR 1=1 --`
+  returned all 1169 speakers, and a lone `'` gave a 500. Now a bind parameter with LIKE wildcards
+  escaped ([examples/speakers-search.hurl](examples/speakers-search.hurl)).
+- **The GitHub Actions `tests` job still ran Java 11** after the upgrade ("release version 25 not
+  supported"). Nobody saw it because the job is `continue-on-error`, so the run still showed green.
 
 **(Caught by our own gate, not the harness:) `ratedAtDisplay` and the JDK.** The first run of
 `verify.sh` failed `ratings.hurl` because the local service ran on JDK 27, which puts a narrow
@@ -146,9 +185,26 @@ sends, but not the legacy behaviour that only lived in `application.properties`.
 - **A review agent that compares old and new behaviour.** Instead of reading the diff, it runs the
   same requests against the old and the new build and compares status, headers and bodies. That's how
   it found the silently ignored properties.
+- **Race tests against the deployed service, without Docker.** Plain `curl … &` plus `wait`, then
+  check the invariant (never more than the limit, at most one winner):
+  [workflow/scripts/co-speakers-race.sh](workflow/scripts/co-speakers-race.sh). Unit tests prove the
+  locking logic. This proves it on the real database and connection pool.
+- **Read the harness's traffic before claiming.** The checks probe features before they're claimed.
+  With request logging (method, path, status, bodies: `RequestLoggingFilter`), the logs show what the
+  checks send and what we answer, for free.
+- **Deploy only what changes the image:** `paths-ignore` in
+  [.github/workflows/deploy.yml](.github/workflows/deploy.yml). Docs and process commits stop costing
+  availability.
 - **A gate that can't pass on the wrong runtime:** [workflow/scripts/verify.sh](workflow/scripts/verify.sh)
   takes the JDK from `pom.xml` for both the build and the run, cleans first, and checks Maven's exit code.
 
 ## 6. One thing we'd do differently
 
 <!-- One thing, and why. -->
+
+**Test against production-sized data and production deploys from the first hour, not just the
+rules.** Our tests checked every business rule, but on an empty database and a service that never
+restarts. The two things that cost us the most weren't rule bugs: a talk list that got slower with
+every tick (2 queries per talk), and container restarts on every push. Together they lost us more than
+any FAULTY check. A Hurl file with a `duration` limit, a seeded database of a few thousand rows, and a
+deploy rule that skips docs would have caught both on day one.
