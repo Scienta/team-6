@@ -8,8 +8,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 
-import org.junit.jupiter.api.AfterAll;
+import com.github.dockerjava.api.DockerClient;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
@@ -28,17 +31,24 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class HealthTest {
 
-    private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
+    // Its own container, since the tests pause it. Reused across runs (when testcontainers.reuse.enable=true) under its
+    // own label, so it never shares the common TestDatabase container: saves ~18 s of start-up per run.
+    private static final Map<String, String> LABEL = Map.of("no.scienta.cfp.test", "health");
+    private static final PostgreSQLContainer POSTGRES =
+            new PostgreSQLContainer("postgres:16-alpine").withLabels(LABEL).withReuse(true);
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
+        unpauseLeftovers();
         POSTGRES.start();
         TestDatabase.pointAt(registry, POSTGRES, POSTGRES.getDatabaseName());
     }
 
-    @AfterAll
-    static void stop() {
-        POSTGRES.stop();
+    // A run killed while the database was paused leaves the reused container paused, and start() would then hang.
+    private static void unpauseLeftovers() {
+        DockerClient docker = DockerClientFactory.instance().client();
+        docker.listContainersCmd().withLabelFilter(LABEL).withStatusFilter(List.of("paused")).exec()
+                .forEach(c -> docker.unpauseContainerCmd(c.getId()).exec());
     }
 
     @Value("${local.server.port}")
