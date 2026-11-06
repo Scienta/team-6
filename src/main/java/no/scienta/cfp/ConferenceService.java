@@ -367,7 +367,7 @@ public class ConferenceService {
      * Puts an accepted talk in a room and slot (workflow/specs/scheduling.md). The slot's three places are locked
      * first, then the talk, so concurrent PUTs into one slot (R6, R8) or of one talk (R7) run one after another and
      * each sees the last one's result. Lock order is always slot, then talk. Putting a talk where it already is
-     * is a 409 (PO-?1).
+     * changes nothing and answers 200 (PO-?1, confirmed by scheduling/check-1).
      */
     @Transactional
     public Map<String, Object> schedule(String room, String slot, Map<String, Object> body) {
@@ -390,8 +390,8 @@ public class ConferenceService {
         }
         Long here = slotTalks.get(room);
         if (here != null && here == talkId) {
-            // PO-?1: 409, as a repeated acceptance decision (the harness failed acceptance check-3/check-5 on 200)
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "the talk is already in " + room + " " + slot);
+            // PO-?1: 200, unchanged. scheduling/check-1 was FAULTY on 409 for exactly this repeat (tick 140).
+            return Programme.entry(room, slot, talkId);
         }
         if (!"ACCEPTED".equals(talk.get("status"))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "only accepted talks go on the programme");

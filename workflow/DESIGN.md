@@ -318,7 +318,7 @@ Released tick 100. Open PO questions PO-?1..6 carry our defaults.
 | D1806 | Main speakers and co-speakers of all talks in one slot are all different people (compared as they are now, PO-?6). |
 | D1807 | Rules are checked at PUT only; a talk changing later (withdrawn, co-speaker added) leaves the programme alone. |
 | D1808 | Concurrent PUTs never break D1803–D1806 (see D1901). |
-| D1850 | **[ours]** PUT ok → `200` Entry. Same talk into the place it already has → `409` unchanged (PO-?1, as D1450's repeat). Rule violations D1803–D1806 → `409`. |
+| D1850 | **[ours]** PUT ok → `200` Entry. Same talk into the place it already has → `200` unchanged (PO-?1; `409` was FAULTY on `scheduling/check-1`, tick 140 — unlike D1450's repeat). Rule violations D1803–D1806 → `409`. |
 | D1851 | **[ours]** GET/DELETE of an empty place → `404` (PO-?2); DELETE ok → `204`, no body (PO-?3). |
 | D1852 | **[ours]** Room or slot outside the venue (incl. lower case) → `404`, any method (PO-?4). |
 | D1853 | **[ours]** `talkId` missing, null, not a whole number, or < 1 → `400`; no such talk (incl. too big for an id) → `400` (PO-?5, as an unknown `speakerId` in `POST /talks`). Malformed JSON → `400`, non-JSON → `415`. |

@@ -35,7 +35,7 @@ Spec: `specs/scheduling.md` (V1), our decisions: `workflow/specs/scheduling.md`.
 | R7 already elsewhere → 409 | `aTalkIsOnTheProgrammeOnce` | ✔ |
 | R8 main/main, main/co, co/co clash in one slot → 409; same speaker in another slot ok | `nobodyInTwoRoomsAtOnce` | ✔ |
 | R9 withdrawn / co-speaker added after scheduling: entry stays | `laterChangesLeaveTheProgramme` | ✔ |
-| PO-?1 repeat put → 409, also after withdrawal; entry stays | `repeatingAPutIs409` | ✔ |
+| PO-?1 repeat put → 200, also after withdrawal; entry stays | `repeatingAPutIsHarmless` | ✔ |
 | PO-?2/3 empty GET/DELETE → 404, DELETE → 204 | `emptyRoomAndSlot` | ✔ |
 | PO-?4 → 404, PO-?5 unknown talk → 400, 400s | `invalidRequests` | ✔ |
 | R10 20 talks into one room/slot → one 200 | `concurrentPutsIntoOneSlot` | - |
@@ -67,7 +67,8 @@ places it uses first (`DELETE`, any of `204`/`404`), so it can run again.
 ## Deviations from the plan
 
 - `TalkDao.lockForUpdate` now also returns `format`; `ConferenceServiceTest` passes a mock `ProgrammeDao`.
-- PO-?1 changed to `409` and PO-?5 to `400` after verify, following harness precedent (acceptance
+- PO-?1 changed to `409` and PO-?5 to `400` after verify; PO-?1 went back to `200` at tick 140 when
+  `scheduling/check-1` was FAULTY on the repeat PUT. PO-?5 `400` passed the same check. Original reasoning: following harness precedent (acceptance
   check-3/check-5 refused `200` for a repeat; `POST /talks` gives `400` for an unknown `speakerId`).
 - Review findings (tick ~110): R6 got a conditional-write backstop; the tests above were added; the
   400/415-before-404 order for unreadable bodies is recorded in the spec.

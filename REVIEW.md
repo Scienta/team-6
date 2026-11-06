@@ -60,6 +60,7 @@ claimed or skipped, at which tick, and the evidence you held before claiming. Fo
 | co-speakers | claimed | 70 | Our spec decisions in [workflow/specs/co-speakers.md](workflow/specs/co-speakers.md). `examples/co-speakers.hurl` green against the live URL. [workflow/scripts/co-speakers-race.sh](workflow/scripts/co-speakers-race.sh) green **live**: 10 different speakers added at once give exactly 2 co-speakers (2×200, 8×409), 5 identical adds give one entry, 5 identical deletes give one 200 and four 404. Before claiming we also read the harness's own co-speaker traffic in our request log (it probes unclaimed features): no 500s, and the codes matched our decisions. Still missed check-2 (see §4) |
 | acceptance | claimed | 107 | The harness's spec was identical to our copy, and every rule R1-R9 had a decision and a test (`AcceptanceTest`, 13 tests, including two concurrency tests). `examples/acceptance.hurl` green live. About 350 acceptance requests from the harness in our logs, with no 500s. A **live** race test: 5 rounds of 5 ACCEPTED + 5 REJECTED + 2 withdrawals on one talk at once. Every round ended in one allowed state (accept and reject never both won, at most one withdrawal), and the rounds happened to cover all three orders. Still missed check-3/check-5 (see §4) |
 | spring-boot-4 | claimed | 98 | Spec and plan: [workflow/specs/spring-boot-4.md](workflow/specs/spring-boot-4.md), [workflow/plans/spring-boot-4.md](workflow/plans/spring-boot-4.md). 20 pinned behaviours (P1-P20: `UpgradeContractTest`, `UtilsTest#usShortIsByteExact`, `examples/spring-boot-4.hurl`), green on Boot 2.7 before the upgrade and on 4.1.2 / Java 25 after. `verify.sh` green on JDK 25 (96 tests, 7 Hurl files, 137 requests). The production image built locally passed every Hurl file. An independent review agent compared about 140 identical requests against the old and new jars. Deployed `4e7a533`: `/actuator/info` reports `4.1.2` / `25.0.5`, Hurl green against the live URL. Harness after the claim: spring-boot-4 2/2 OK, base features all OK from tick 100 |
+| scheduling | claimed | 136 | Spec decisions in [workflow/specs/scheduling.md](workflow/specs/scheduling.md), plan in [workflow/plans/scheduling.md](workflow/plans/scheduling.md). `SchedulingTest` (17 tests, rules R1-R10, including 4 concurrency tests: one place × 12 talks, one talk × 15 places, a 9-way speaker clash, put racing take-out). `examples/scheduling.hurl` green locally; `verify.sh` green (124 tests, 11 Hurl files). An independent review agent found no race or deadlock and 4 gaps, all fixed. Deployed in `eeb3439` (contains `39f14ce`). Still missed check-1 (see §4) |
 
 ## 4. What the harness caught that we didn't
 
@@ -169,6 +170,18 @@ something the one before it missed:
 
 Why our first pass missed the review's findings: we pinned what the specs say and what the harness
 sends, but not the legacy behaviour that only lived in `application.properties`.
+
+**Scheduling check-1: putting a talk into the place it already has (FAULTY tick 140).** Our first
+default was `200, nothing changes`. Before shipping we switched it to `409`, by analogy with
+acceptance, where the harness had just rejected `200` for a repeated decision. The harness wanted
+`200` here. The same transcript confirmed our other guesses: `404` for a room outside the venue,
+`400` for an unknown `talkId`, `404` for an empty place.
+
+- *Why we missed it:* we generalised one check's verdict ("a repeat is a 409") to a different kind
+  of request. A repeated decision changes a state machine; a repeated PUT of the same entry is
+  idempotent. Precedent only transfers for the same kind of request, as our spec template says.
+- *What we do now:* a code changed only by analogy keeps a note of the original default, so it can be
+  reverted in one step. That's how this fix took one edit.
 
 ## 5. Reusable artifacts
 

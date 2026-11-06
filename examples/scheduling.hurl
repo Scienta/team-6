@@ -134,10 +134,12 @@ HTTP 200
 jsonpath "$.start" == "09:00"
 jsonpath "$.talkId" == {{ada_talk}}
 
-# PO-?1: the same put again is a 409, as a repeated acceptance decision; the entry stays
+# PO-?1: the same put again is a 200, unchanged (scheduling/check-1 failed on 409)
 PUT {{base_url}}/programme/R1/S1
 { "talkId": {{ada_talk}} }
-HTTP 409
+HTTP 200
+[Asserts]
+jsonpath "$.talkId" == {{ada_talk}}
 
 GET {{base_url}}/programme/R1/S1
 HTTP 200

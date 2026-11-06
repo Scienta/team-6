@@ -243,16 +243,16 @@ class SchedulingTest {
     }
 
     @Test
-    void repeatingAPutIs409() { // PO-?1: as a repeated acceptance decision
+    void repeatingAPutIsHarmless() { // PO-?1: 200 unchanged; scheduling/check-1 failed on 409 (tick 140)
         long speaker = api.speaker();
         long talk = accepted(speaker, "PRESENTATION");
         assertEquals(200, put("R1", "S1", talk).status);
-        assertEquals(409, put("R1", "S1", talk).status);
+        assertEntry(put("R1", "S1", talk), "R1", "S1", "09:00", "10:00", talk);
         assertEntry(get("R1", "S1"), "R1", "S1", "09:00", "10:00", talk);
-        // still 409 after a withdrawal, and the entry stays (R9)
+        // still 200 after a withdrawal: the repeat check runs before R4, and the entry stays (R9)
         assertEquals(200, api.withdraw(talk, speaker).status);
-        assertEquals(409, put("R1", "S1", talk).status);
-        assertEntry(get("R1", "S1"), "R1", "S1", "09:00", "10:00", talk);
+        assertEntry(put("R1", "S1", talk), "R1", "S1", "09:00", "10:00", talk);
+        assertEquals(409, put("R2", "S2", talk).status, "elsewhere it's both scheduled and no longer accepted");
     }
 
     @Test

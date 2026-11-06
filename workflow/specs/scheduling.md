@@ -21,12 +21,12 @@ marked **PO?**.
 
 ## Our decisions
 
-Check order (D1904): place `404` → body `400` → talk exists `400` → `409`s (repeat, R4, R5, R6, R7, R8).
+Check order (D1904): place `404` → body `400` → talk exists `400` → `200` for a repeat, then `409`s (R4, R5, R6, R7, R8).
 
 | Case | Answer |
 |---|---|
 | `PUT`, allowed | `200`, the Entry `{room, slot, start, end, talkId}` |
-| `PUT` the same talk into the room and slot it already has (double-click) | `409`, unchanged, also after the talk was withdrawn (**PO-?1**; precedent: the harness failed acceptance check-3/check-5 on `200` for a repeated decision) |
+| `PUT` the same talk into the room and slot it already has (double-click) | `200`, the Entry, unchanged, also after the talk was withdrawn (**PO-?1**; confirmed by the harness: `scheduling/check-1` was FAULTY on `409`, tick 140) |
 | `GET`, a talk is there | `200`, the Entry |
 | `GET`, empty room and slot | `404` (**PO-?2**) |
 | `DELETE`, a talk is there | `204`, no body (**PO-?3**) |
@@ -42,7 +42,7 @@ Check order (D1904): place `404` → body `400` → talk exists `400` → `409`s
 | room and slot already hold another talk (R6) | `409` |
 | talk already on the programme elsewhere (R7) | `409` |
 | a speaker of the talk (main or co) already speaks in another room in that slot (R8) | `409` |
-| order among the `409`s | not observable apart from the message; checked repeat, R4, R5, R6, R7, R8 |
+| order among the `409`s | not observable apart from the message; checked R4, R5, R6, R7, R8 |
 | speakers compared for R8 | the talks' speakers **now** (main + current co-speakers), not as they were when scheduled (**PO-?6**) |
 | talk changes after scheduling (R9) | entry stays, `GET` still shows it; nothing re-checked |
 | Talk view (D1900) | unchanged: no `room`/`slot` field on Talk |
@@ -56,7 +56,7 @@ None yet. Open:
 
 | # | Question | Our default (harness precedent wins over a guess) |
 |---|---|---|
-| PO-?1 | Putting a talk into the room and slot it already has: `200` unchanged or `409`? | `409` (was `200`; changed at tick ~111 after acceptance PO-1 was overruled by the harness) |
+| PO-?1 | Putting a talk into the room and slot it already has: `200` unchanged or `409`? | `200`. History: `200` (our default) → `409` (tick ~111, by analogy with acceptance's repeat) → FAULTY `scheduling/check-1` tick 140 → `200` again. A repeat PUT isn't a repeated decision. |
 | PO-?2 | `GET` of an empty room and slot: `404`, or `200` with `talkId: null`? | `404` |
 | PO-?3 | `DELETE` answer: `204` empty, or `200` with the removed Entry? | `204` |
 | PO-?4 | A room or slot that doesn't exist (`R4`, `S6`): `404` or `400`? | `404` |
