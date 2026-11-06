@@ -66,7 +66,7 @@ class CoSpeakersTest {
         assertEquals(200, put(talk, b).status);
         Api.Res res = put(talk, a);
         assertEquals(200, res.status, res.toString());
-        assertEquals(b, res.json.get("coSpeakerIds").get(0).asLong(), "R4: the PUT answers with the full Talk");
+        assertEquals(b, res.number("$.coSpeakerIds[0]"), "R4: the PUT answers with the full Talk");
         assertEquals(Arrays.asList(b, a), api.coSpeakers(talk));
         assertEquals(200, delete(talk, b).status);
         assertEquals(Arrays.asList(a), api.coSpeakers(talk));
@@ -75,11 +75,23 @@ class CoSpeakersTest {
     }
 
     @Test
-    void mainSpeakerCannotCoSpeak() {
+    // PO-2: adding the main speaker as co-speaker is a 200 that changes nothing (harness co-speakers/check-2)
+    void addingTheMainSpeakerChangesNothing() {
         long main = api.speaker();
         long talk = api.talk(main);
-        assertEquals(409, put(talk, main).status);
+        Api.Res res = put(talk, main);
+        assertEquals(200, res.status, res.toString());
+        assertEquals(talk, res.number("$.id"), "answers with the full Talk");
+        assertEquals(0, res.size("$.coSpeakerIds"));
         assertEquals(Arrays.asList(), api.coSpeakers(talk));
+
+        long a = api.speaker();
+        long b = api.speaker();
+        put(talk, a);
+        put(talk, b);
+        res = put(talk, main);
+        assertEquals(200, res.status, "also when the talk already has 2 co-speakers: " + res);
+        assertEquals(Arrays.asList(a, b), api.coSpeakers(talk));
     }
 
     @Test
@@ -126,11 +138,11 @@ class CoSpeakersTest {
         long own = api.talk(co);
         put(talk, co);
         Api.Res list = api.get("/speakers/" + co + "/talks");
-        assertEquals(1, list.json.size());
-        assertEquals(own, list.json.get(0).get("id").asLong());
+        assertEquals(1, list.size("$"));
+        assertEquals(own, list.number("$[0].id"));
         Api.Res filtered = api.get("/talks?speakerId=" + co);
-        assertEquals(1, filtered.json.size());
-        assertEquals(own, filtered.json.get(0).get("id").asLong());
+        assertEquals(1, filtered.size("$"));
+        assertEquals(own, filtered.number("$[0].id"));
     }
 
     @Test

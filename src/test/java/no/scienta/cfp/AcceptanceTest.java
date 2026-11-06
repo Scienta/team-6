@@ -147,16 +147,10 @@ class AcceptanceTest {
         long talk = api.talk(speaker);
         api.decide(talk, "WAITLISTED");
         assertEquals("WAITLISTED", api.get("/talks/" + talk).text("status"));
-        assertEquals("WAITLISTED", api.get("/speakers/" + speaker + "/talks").json.get(0).get("status").asText());
-        assertEquals("WAITLISTED", api.get("/talks?speakerId=" + speaker).json.get(0).get("status").asText());
-        boolean inList = false;
-        for (com.fasterxml.jackson.databind.JsonNode t : api.get("/talks").json) {
-            if (t.get("id").asLong() == talk) {
-                assertEquals("WAITLISTED", t.get("status").asText());
-                inList = true;
-            }
-        }
-        assertTrue(inList);
+        assertEquals("WAITLISTED", api.get("/speakers/" + speaker + "/talks").at("$[0].status"));
+        assertEquals("WAITLISTED", api.get("/talks?speakerId=" + speaker).at("$[0].status"));
+        List<String> inList = api.get("/talks").at("$[?(@.id == " + talk + ")].status");
+        assertEquals(List.of("WAITLISTED"), inList);
     }
 
     @Test
@@ -224,7 +218,7 @@ class AcceptanceTest {
 
         assertTalk("WAITLISTED", api.decide(fourth, "WAITLISTED"));
         assertEquals(409, api.submit(speaker).status, "waitlisted still counts");
-        assertEquals(5, api.get("/speakers/" + speaker + "/talks").json.size(), "the speaker still sees all their talks");
+        assertEquals(5, api.get("/speakers/" + speaker + "/talks").size("$"), "the speaker still sees all their talks");
     }
 
     @Test

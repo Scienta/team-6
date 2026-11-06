@@ -63,9 +63,13 @@ jsonpath "$.coSpeakerIds[1]" == {{co1_id}}
 PUT {{base_url}}/talks/{{talk_id}}/co-speakers/{{co3_id}}
 HTTP 409
 
-# R3: the main speaker can't co-speak on their own talk
+# R3, PO-2: the main speaker can't co-speak on their own talk; adding them is a 200 that changes nothing,
+# also when the talk already has 2 co-speakers (as here)
 PUT {{base_url}}/talks/{{talk_id}}/co-speakers/{{main_id}}
-HTTP 409
+HTTP 200
+[Asserts]
+jsonpath "$.coSpeakerIds" count == 2
+jsonpath "$.coSpeakerIds" not contains {{main_id}}
 
 # Unknown talk or speaker
 PUT {{base_url}}/talks/999999999/co-speakers/{{co1_id}}

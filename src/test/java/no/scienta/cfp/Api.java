@@ -13,8 +13,14 @@ import java.util.concurrent.CompletableFuture;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.JsonPath;
 
-/** A small HTTP client for the API tests: sends JSON, parses the answer, and creates test data. */
+/**
+ * A small HTTP client for the API tests: sends JSON, reads the answer, and creates test data. Two ways to read a
+ * response: JsonPath ({@link Res#at}) and a Jackson 2 tree ({@link Res#json}). Neither uses the app's own JSON library
+ * (Jackson 3 since Spring Boot 4): Jackson 2 is a test-only dependency in pom.xml, so the tests stay an independent
+ * client whatever the app serializes with.
+ */
 final class Api {
 
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -26,7 +32,10 @@ final class Api {
         this.port = port;
     }
 
-    /** A response: its status, and its body parsed as JSON (null when empty or not JSON). */
+    /**
+     * A response: its status and body, with JsonPath accessors ({@code $.status}, {@code $[0].id}, ...) and the body
+     * as a Jackson tree ({@code json}, null when empty or not JSON).
+     */
     static final class Res {
         final int status;
         final String body;
@@ -44,8 +53,20 @@ final class Api {
             this.json = parsed;
         }
 
+        <T> T at(String path) {
+            return JsonPath.read(body, path);
+        }
+
         String text(String field) {
-            return json.get(field).asText();
+            return String.valueOf((Object) at("$." + field));
+        }
+
+        long number(String path) {
+            return ((Number) at(path)).longValue();
+        }
+
+        int size(String path) {
+            return ((List<?>) at(path)).size();
         }
 
         @Override
@@ -95,7 +116,7 @@ final class Api {
     long speaker(String name) {
         Res r = register(name, "speaker-" + UUID.randomUUID() + "@example.com");
         assertEquals(201, r.status, r.toString());
-        return r.json.get("id").asLong();
+        return r.number("$.id");
     }
 
     Res register(String name, String email) {
@@ -152,7 +173,7 @@ final class Api {
     long talk(long speakerId) {
         Res r = submit(speakerId);
         assertEquals(201, r.status, r.toString());
-        return r.json.get("id").asLong();
+        return r.number("$.id");
     }
 
     Res rate(long talkId, long reviewerId, int score) {
@@ -179,7 +200,9 @@ final class Api {
         Res r = get("/talks/" + talkId);
         assertEquals(200, r.status, r.toString());
         List<Long> ids = new ArrayList<>();
-        r.json.get("coSpeakerIds").forEach(n -> ids.add(n.asLong()));
+        for (Object n : r.<List<?>>at("$.coSpeakerIds")) {
+            ids.add(((Number) n).longValue());
+        }
         return ids;
     }
 }
