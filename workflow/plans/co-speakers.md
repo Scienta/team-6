@@ -19,7 +19,7 @@ rules have no test in `./mvnw package`. Harness: released at tick 0, unclaimed.
 | Rule / decision | JUnit `CoSpeakersTest` |
 |---|---|
 | R4 new talk has `[]`; order kept; re-added goes last | `coSpeakersShowInTheOrderAdded` |
-| R3, PO-2 main speaker → 200, unchanged (also with 2 co-speakers) | `addingTheMainSpeakerChangesNothing` |
+| R3, PO-2 main speaker → 400, unchanged (also with 2 co-speakers) | `addingTheMainSpeakerIs400` |
 | R2 third → 409, unchanged | `atMostTwoCoSpeakers` |
 | 404 unknown talk / speaker (PUT, DELETE) | `unknownTalkOrSpeakerIs404` |
 | PO-1 DELETE of a non-co-speaker (or unknown speaker) → 404 unchanged | `removingANonCoSpeakerIs404` |

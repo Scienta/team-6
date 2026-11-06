@@ -248,8 +248,8 @@ public class ConferenceService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "speaker not found");
         }
         if (mainSpeaker == speakerId) {
-            // The main speaker is never a co-speaker of their own talk; asking for it changes nothing (PO-2).
-            return getTalk(talkId);
+            // PO-2: 400, talk unchanged. The harness's co-speakers/check-2 rejected 409 (ticks 71-89) and 200 (tick 90).
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "the main speaker can't be a co-speaker of their own talk");
         }
         List<Long> current = coSpeakerDao.findByTalk(talkId);
         if (!current.contains(speakerId)) {

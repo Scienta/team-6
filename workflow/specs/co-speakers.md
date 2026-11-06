@@ -24,7 +24,7 @@ owner are marked **PO?**.
 | PUT, already a co-speaker (R5) | `200`, talk unchanged, order unchanged. This holds even when the talk already has 2. |
 | PUT, talk doesn't exist | `404` |
 | PUT, speaker doesn't exist | `404` |
-| PUT, speaker is the main speaker (R3) | `200`, talk unchanged: the main speaker is never in `coSpeakerIds`, also when the talk already has 2 (PO-2) |
+| PUT, speaker is the main speaker (R3) | `400`, talk unchanged, also when the talk already has 2 (PO-2) |
 | PUT, talk already has 2 other co-speakers (R2) | `409` |
 | `DELETE /talks/{id}/co-speakers/{speakerId}`, OK | `200`, the full Talk |
 | DELETE, speaker isn't a co-speaker (incl. an unknown speaker) | `404`, talk unchanged (PO-1) |
@@ -38,7 +38,7 @@ owner are marked **PO?**.
 | # | Question | Answer | Asked (tick) | Test |
 |---|---|---|---|---|
 | PO-1 | DELETE of a speaker who isn't a co-speaker of the talk: 200 or 404? | `404`, talk unchanged | 38 | `CoSpeakersTest#removingANonCoSpeakerIs404`, `examples/co-speakers.hurl` "# PO-1" |
-| PO-2 | PUT of the talk's main speaker as co-speaker: 400, 422, or 200 with nothing changed? Asked because harness `co-speakers/check-2` was FAULTY on our `409` (ticks 71-75). | `200`, talk unchanged | 75 | `CoSpeakersTest#addingTheMainSpeakerChangesNothing`, `examples/co-speakers.hurl` "# PO-2" |
+| PO-2 | PUT of the talk's main speaker as co-speaker: 400, 422, or 200 with nothing changed? Asked because harness `co-speakers/check-2` was FAULTY on our `409` (ticks 71-75). | `400`, talk unchanged. History: 409 (ours) FAULTY ticks 71-89; 200 (PO, tick 75) still FAULTY at tick 90 on the new code; 400 decided at tick 90, to be confirmed by check-2 | 75, 90 | `CoSpeakersTest#addingTheMainSpeakerIs400`, `examples/co-speakers.hurl` "# PO-2" |
 
 Note: [acceptance PO-2](acceptance.md#product-owner-answers) changes the 3-talk limit (withdrawn
 and rejected talks don't count). R7 still holds: co-speaking never counts.

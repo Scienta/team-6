@@ -75,14 +75,13 @@ class CoSpeakersTest {
     }
 
     @Test
-    // PO-2: adding the main speaker as co-speaker is a 200 that changes nothing (harness co-speakers/check-2)
-    void addingTheMainSpeakerChangesNothing() {
+    // PO-2: adding the main speaker as co-speaker is a 400 and changes nothing (harness co-speakers/check-2
+    // rejected 409 and 200)
+    void addingTheMainSpeakerIs400() {
         long main = api.speaker();
         long talk = api.talk(main);
         Api.Res res = put(talk, main);
-        assertEquals(200, res.status, res.toString());
-        assertEquals(talk, res.number("$.id"), "answers with the full Talk");
-        assertEquals(0, res.size("$.coSpeakerIds"));
+        assertEquals(400, res.status, res.toString());
         assertEquals(Arrays.asList(), api.coSpeakers(talk));
 
         long a = api.speaker();
@@ -90,7 +89,7 @@ class CoSpeakersTest {
         put(talk, a);
         put(talk, b);
         res = put(talk, main);
-        assertEquals(200, res.status, "also when the talk already has 2 co-speakers: " + res);
+        assertEquals(400, res.status, "also when the talk already has 2 co-speakers: " + res);
         assertEquals(Arrays.asList(a, b), api.coSpeakers(talk));
     }
 
