@@ -55,10 +55,15 @@ claimed or skipped, at which tick, and the evidence you held before claiming. Fo
 | Speakers | claimed | 3 | examples.hurl green against our URL, plus our own edge-case tests for R3 and R7 |
 -->
 
+| Feature | Claimed or skipped | Tick | Evidence before claiming |
+|---|---|---|---|
+| spring-boot-4 | claimed | 98 | Spec and plan: [workflow/specs/spring-boot-4.md](workflow/specs/spring-boot-4.md), [workflow/plans/spring-boot-4.md](workflow/plans/spring-boot-4.md). 20 pinned behaviours (P1-P20: `UpgradeContractTest`, `UtilsTest#usShortIsByteExact`, `examples/spring-boot-4.hurl`), green on Boot 2.7 before the upgrade and on 4.1.2 / Java 25 after. `verify.sh` green on JDK 25 (96 tests, 7 Hurl files, 137 requests). The production image built locally passed every Hurl file. An independent review agent compared about 140 identical requests against the old and new jars. Deployed `4e7a533`: `/actuator/info` reports `4.1.2` / `25.0.5`, Hurl green against the live URL. Harness after the claim: spring-boot-4 2/2 OK, base features all OK from tick 100 |
+
 ## 4. What the harness caught that we didn't
 
 <!-- Failures the harness found after you claimed (or after a deploy), and why your own review missed them. -->
 
+<<<<<<< Updated upstream
 **Co-speakers, adding the main speaker (harness `co-speakers/check-2`, FAULTY ticks 71–75).** We
 answered `409` when a talk's main speaker was added as its co-speaker; the check wanted the request
 to change nothing. The feature request gives no status codes, so `409` was our own guess, and every
@@ -73,10 +78,61 @@ fine. We made the gate run the production JDK, and the finding became the main r
 spring-boot-4 upgrade: Java 25 has the same locale data. The upgrade now writes the format
 explicitly instead of relying on locale data, pinned byte-exact by `UtilsTest` and
 `UpgradeContractTest` ([DESIGN.md](workflow/DESIGN.md) D1250, D1650, D1701).
+=======
+**Harness, ratings check-1, tick 99 (after the spring-boot-4 deploy).** One `POST /speakers` got no
+answer at all (status none, empty body), and the check was OK again at tick 100. Our deploy finished at
+13:03 and the ticks after it (93-98) were OK. A docs-only commit pushed right after ours triggered a
+second redeploy at 13:06, and tick 99 falls in that container swap. The logs show no errors or 500s.
+Our review couldn't catch it: no local gate tests the moment a container is replaced. **Lesson:** two
+pushes to `main` minutes apart cost us a check run; batch docs commits or push them between ticks.
+
+**Caught by our own layers before the harness did: the Spring Boot 4 upgrade** (details under
+"Deviations" in [workflow/plans/spring-boot-4.md](workflow/plans/spring-boot-4.md)). Each layer caught
+something the one before it missed:
+
+1. **Pins written first, on the old stack.** On Boot 4.1 / Java 25 they failed exactly where the spec
+   predicted:
+   - `ratedAtDisplay` got a narrow no-break space (U+202F) before PM
+   - `POST /speakers/` returned 404
+   - `submittedAt` ended in `Z` instead of `+00:00`
+   - JSON with comments got a 400
+2. **The gate found two traps the spec hadn't foreseen.**
+   - Every `/talks/{id}/…` route answered 500. Spring 6.1+ needs the `-parameters` flag, which
+     `spring-boot-starter-parent` normally sets, and we don't use the parent POM.
+   - `submittedOn` came out **a day early** on any JVM east of UTC (`java.sql.Date` is local midnight).
+     Production runs in UTC, which hid it.
+3. **The independent review agent found what no test of ours covered.**
+   - Three properties renamed in Boot 4.0 are **silently ignored** under their old names. Error bodies
+     lost `message` and `errors`, and responses lost `charset=UTF-8`. The legacy mobile client depends
+     on those.
+   - Jackson 3 now rejects text after the JSON (201 became 400).
+   - The branch was behind `main` and would have undone teammates' work.
+
+Why our first pass missed the review's findings: we pinned what the specs say and what the harness
+sends, but not the legacy behaviour that only lived in `application.properties`.
+
+(Earlier, also caught by our gate, not the harness: the first `verify.sh` run failed `ratings.hurl`
+because the local JDK put U+202F before AM/PM. That was the clue behind the P3 pin. Since the
+upgrade, the format is an explicit pattern and the gate runs on the `pom.xml` JDK.)
+>>>>>>> Stashed changes
 
 ## 5. Reusable artifacts
 
 <!-- What's worth taking to client work: agents, skills, prompts, spec templates, gates. Give the paths. -->
+
+- **Pin first, then upgrade.** For a framework or runtime upgrade:
+  1. List the implicit behaviour the specs, the real traffic (our request log) and the config promise.
+  2. Pin it with tests that pass on the *old* stack.
+  3. Upgrade, and fix until the same tests pass on the new stack.
+
+  Example: [workflow/specs/spring-boot-4.md](workflow/specs/spring-boot-4.md) (the "Upgrade traps"
+  and "Behaviour we pin" tables) and
+  [src/test/java/no/scienta/cfp/UpgradeContractTest.java](src/test/java/no/scienta/cfp/UpgradeContractTest.java).
+- **A review agent that compares old and new behaviour.** Instead of reading the diff, it runs the
+  same requests against the old and the new build and compares status, headers and bodies. That's how
+  it found the silently ignored properties.
+- **A gate that can't pass on the wrong runtime:** [workflow/scripts/verify.sh](workflow/scripts/verify.sh)
+  takes the JDK from `pom.xml` for both the build and the run, cleans first, and checks Maven's exit code.
 
 ## 6. One thing we'd do differently
 
