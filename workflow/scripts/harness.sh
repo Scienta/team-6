@@ -96,7 +96,7 @@ case "$cmd" in
     # deploy.yml skips pushes that only change docs (paths-ignore), so the live version is the last commit on
     # origin/main that touches anything else. Keep this list in step with paths-ignore in deploy.yml.
     want="$(git -C "$root" log -1 --format=%H origin/main -- . ':(exclude)*.md' ':(exclude)workflow' \
-      ':(exclude).claude' ':(exclude)specs' ':(exclude)examples')"
+      ':(exclude).claude' ':(exclude)specs' ':(exclude)examples' ':(exclude).github')"
     if echo "$body" | grep -q "\"$want\""; then echo "deployed = last deployable commit on origin/main ($want)"; else echo "deployed != last deployable commit on origin/main ($want): deploy pending or failed"; exit 3; fi ;;
   *)
     sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;

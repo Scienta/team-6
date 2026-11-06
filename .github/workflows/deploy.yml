@@ -26,6 +26,9 @@ on:
       - '.claude/**'
       - 'specs/**'
       - 'examples/**'
+      # The image is built from the Dockerfile, pom.xml and src/ only: a workflow or script change needs no restart.
+      # (Run the workflow by hand from the Actions tab if you do want a deploy.)
+      - '.github/**'
   workflow_dispatch:
 
 # One deploy at a time; a newer push waits rather than cancelling a deploy halfway.
@@ -94,7 +97,9 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "11"
+          # Same Java as the Dockerfile and pom.xml (Spring Boot 4 on Java 25). With 11 the job failed:
+          # "release version 25 not supported".
+          java-version: "25"
       - name: Cache ~/.m2
         uses: actions/cache@v4
         with:
