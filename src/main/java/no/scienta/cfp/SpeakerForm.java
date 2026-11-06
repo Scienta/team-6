@@ -1,7 +1,9 @@
 package no.scienta.cfp;
 
+import javax.validation.constraints.AssertTrue;
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Size;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * Request body for POST /speakers.
@@ -14,8 +16,15 @@ public class SpeakerForm {
     @NotBlank
     private String email;
 
-    @Size(max = 500)
+    // At most 500 characters, counted as Unicode code points: @Size counts UTF-16 units, so an emoji (😀) counted 2
+    // and 500 emojis were refused. See isBioAtMost500Characters.
     private String bio;
+
+    @JsonIgnore
+    @AssertTrue(message = "bio is at most 500 characters")
+    public boolean isBioAtMost500Characters() {
+        return bio == null || bio.codePointCount(0, bio.length()) <= 500;
+    }
 
     // TODO twitter handle, see CFP-112
     // private String twitter;
