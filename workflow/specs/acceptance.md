@@ -23,13 +23,13 @@ owner are marked **PO?**.
 | From \ To | ACCEPTED | REJECTED | WAITLISTED | WITHDRAWN (speaker) |
 |---|---|---|---|---|
 | SUBMITTED | ✔ if ≥2 reviewers | ✔ | ✔ | ✔ |
-| WAITLISTED | ✔ if ≥2 reviewers | ✔ | = 200 unchanged (PO-1) | ✔ |
-| ACCEPTED | = 200 unchanged (PO-1) | ✘ 409 | ✘ 409 | ✔ |
-| REJECTED | ✘ 409 | = 200 unchanged (PO-1) | ✘ 409 | ✘ 409 |
+| WAITLISTED | ✔ if ≥2 reviewers | ✔ | ✘ 409 (repeat) | ✔ |
+| ACCEPTED | ✘ 409 (repeat) | ✘ 409 | ✘ 409 | ✔ |
+| REJECTED | ✘ 409 | ✘ 409 (repeat) | ✘ 409 | ✘ 409 |
 | WITHDRAWN | ✘ 409 | ✘ 409 | ✘ 409 | ✘ 409 |
 
-Only the listed transitions are allowed. Repeating the decision a talk already has (`=` in the
-table) is a `200` with the talk unchanged (PO-1): a committee double-click is harmless.
+Only the listed transitions are allowed. Repeating the decision a talk already has is not one of them: `409`,
+unchanged. PO-1 said `200`; the harness failed check-3 and check-5 on "ACCEPTED twice" (ticks 108-110), so changed tick 111.
 Withdrawing an already withdrawn talk stays a `409`, as the feature request says so.
 
 ## Our decisions
@@ -38,7 +38,7 @@ Withdrawing an already withdrawn talk stays a `409`, as the feature request says
 |---|---|
 | `PUT /talks/{id}/status`, allowed | `200`, the full Talk with the new `status` |
 | decision not allowed from the current status | `409`, unchanged |
-| the same decision the talk already has (PO-1) | `200`, unchanged |
+| the same decision the talk already has | `409`, unchanged (PO-1 overruled by the harness, tick 111) |
 | `ACCEPTED` with fewer than 2 distinct reviewers | `409`, unchanged |
 | body `status` missing, not a string, or not one of `ACCEPTED`/`REJECTED`/`WAITLISTED` (incl. `SUBMITTED`, `WITHDRAWN`, lower case) | `400` |
 | no body / malformed JSON | `400` (Spring) |
@@ -57,7 +57,7 @@ Withdrawing an already withdrawn talk stays a `409`, as the feature request says
 
 | # | Question | Answer | Asked (tick) | Test |
 |---|---|---|---|---|
-| PO-1 | Repeating the decision a talk already has (accept an accepted talk, waitlist a waitlisted one): 409 or 200? | `200`, talk unchanged | 38 | `AcceptanceTest#repeatingTheSameDecisionIsHarmless`, `examples/acceptance.hurl` "# PO-1" |
+| PO-1 | Repeating the decision a talk already has (accept an accepted talk, waitlist a waitlisted one): 409 or 200? | ~~`200`, talk unchanged~~ → `409` from tick 111: the harness failed check-3/check-5 on a repeated ACCEPTED | 38 | `AcceptanceTest#repeatingTheSameDecisionIsRefused`, `examples/acceptance.hurl` |
 | PO-2 | Do withdrawn and rejected talks count towards a speaker's 3-talk limit? | No: only talks that aren't `WITHDRAWN` or `REJECTED` count | 38 | `AcceptanceTest#withdrawnAndRejectedTalksDoNotCountTowardsTheLimit`, `examples/acceptance.hurl` "# PO-2" |
 | PO-3 | Unregistered speaker id withdrawing: 403 or 404? | `403` | 38 | `AcceptanceTest#onlyTheSpeakerCanWithdraw`, `examples/acceptance.hurl` "# PO-3" |
 

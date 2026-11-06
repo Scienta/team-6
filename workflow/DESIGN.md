@@ -167,19 +167,19 @@ Released tick 20, **unclaimed**, implemented.
 | D1407 | A disallowed decision or withdrawal changes nothing. |
 | D1408 | Concurrent decisions never leave the talk in a state the rules disallow (see D1901). |
 
-**Transitions** (`=` means a repeat of the current status: `200`, unchanged — PO-1):
+**Transitions** (a repeat of the current status is not a transition: `409`, unchanged. PO-1 said `200`; the harness overruled it, tick 111):
 
 | From \ To | ACCEPTED | REJECTED | WAITLISTED | WITHDRAWN (speaker) |
 |---|---|---|---|---|
 | SUBMITTED | ✔ if ≥2 reviewers | ✔ | ✔ | ✔ |
-| WAITLISTED | ✔ if ≥2 reviewers | ✔ | = 200 | ✔ |
-| ACCEPTED | = 200 | ✘ 409 | ✘ 409 | ✔ |
-| REJECTED | ✘ 409 | = 200 | ✘ 409 | ✘ 409 |
+| WAITLISTED | ✔ if ≥2 reviewers | ✔ | ✘ 409 | ✔ |
+| ACCEPTED | ✘ 409 | ✘ 409 | ✘ 409 | ✔ |
+| REJECTED | ✘ 409 | ✘ 409 | ✘ 409 | ✘ 409 |
 | WITHDRAWN | ✘ 409 | ✘ 409 | ✘ 409 | ✘ 409 |
 
 | # | Rule **[ours]** |
 |---|---|
-| D1450 | Allowed decision → `200` + full Talk. Disallowed from current status → `409` unchanged. Repeat of current → `200` unchanged (PO-1). `ACCEPTED` with <2 distinct reviewers → `409`. |
+| D1450 | Allowed decision → `200` + full Talk. Disallowed from current status → `409` unchanged. Repeat of current → `409` unchanged (PO-1 overruled by the harness, tick 111). `ACCEPTED` with <2 distinct reviewers → `409`. |
 | D1451 | Bad `status` in body (missing, non-string, or not one of the three — including `SUBMITTED`, `WITHDRAWN`, lower case) → `400`. Malformed/absent JSON → `400`. Non-JSON Content-Type → `415`. |
 | D1452 | Withdraw own talk, allowed → `200` + Talk `WITHDRAWN`. Withdraw a `REJECTED`/`WITHDRAWN` talk → `409`. |
 | D1453 | Withdraw by another speaker, or an unregistered/too-large speaker id → `403` (PO-3). Bad `speakerId` (missing, null, non-integer incl. `2.0`/`true`/`"2"`, or <1) → `400`. |
@@ -188,7 +188,7 @@ Released tick 20, **unclaimed**, implemented.
 | D1456 | Concurrency: one `@Transactional` method locking the talk row `FOR UPDATE`, then checking transition and reviewer count. Ratings are never deleted, so the count cannot drop after the check. No advisory locks. |
 | D1457 | Withdrawn and rejected talks still appear in `GET /talks` and speaker lists, can still be rated, and can still get co-speakers. |
 
-**PO answers on record:** PO-1 repeat decision → `200` unchanged. PO-2 withdrawn/rejected talks
+**PO answers on record:** PO-1 repeat decision → `200` unchanged, overruled by the harness (check-3/check-5, ticks 108-110): `409` from tick 111. PO-2 withdrawn/rejected talks
 don't count towards the 3-talk limit (amends D1106). PO-3 unregistered withdrawer → `403`.
 
 ## D1500–D1599 Workshop registration

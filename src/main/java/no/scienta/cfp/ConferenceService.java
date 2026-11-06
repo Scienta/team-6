@@ -304,7 +304,9 @@ public class ConferenceService {
 
     /**
      * The committee decides on a talk. The talk row is locked first, so concurrent decisions run one after another
-     * and each sees the last one's result. Repeating the decision the talk already has changes nothing (PO-1).
+     * and each sees the last one's result. Only the transitions in ALLOWED_DECISIONS are allowed: repeating the
+     * decision a talk already has is not one of them, so it is a 409 and changes nothing. (PO-1 said 200; the harness
+     * failed acceptance check-3 and check-5 on exactly that, ticks 108-110: "the committee's decision is final".)
      */
     @Transactional
     public TalkDto decide(long talkId, Map<String, Object> body) {
@@ -319,7 +321,7 @@ public class ConferenceService {
         }
         String current = (String) talk.get("status");
         if (current.equals(decision)) {
-            return getTalk(talkId);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "the talk is already " + current);
         }
         if (!ALLOWED_DECISIONS.getOrDefault(current, Collections.emptySet()).contains(decision)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "a " + current + " talk can't be " + decision);

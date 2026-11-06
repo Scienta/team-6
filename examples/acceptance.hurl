@@ -76,9 +76,13 @@ HTTP 200
 [Asserts]
 jsonpath "$.status" == "WAITLISTED"
 
-# PO-1: the same decision again is a 200, unchanged
+# The same decision again isn't an allowed transition: 409, unchanged (PO-1 said 200; the harness said no,
+# acceptance check-3/check-5, ticks 108-110)
 PUT {{base_url}}/talks/{{a_id}}/status
 { "status": "WAITLISTED" }
+HTTP 409
+
+GET {{base_url}}/talks/{{a_id}}
 HTTP 200
 [Asserts]
 jsonpath "$.status" == "WAITLISTED"
@@ -89,13 +93,22 @@ HTTP 200
 [Asserts]
 jsonpath "$.status" == "ACCEPTED"
 
+# Accepting an accepted talk again: 409 (exactly what harness check-3 sends)
+PUT {{base_url}}/talks/{{a_id}}/status
+{ "status": "ACCEPTED" }
+HTTP 409
+
+GET {{base_url}}/talks/{{a_id}}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "ACCEPTED"
+
 # R2: accepted is final; R8: refused changes nothing
 PUT {{base_url}}/talks/{{a_id}}/status
 { "status": "REJECTED" }
 HTTP 409
 
-PUT {{base_url}}/talks/{{a_id}}/status
-{ "status": "ACCEPTED" }
+GET {{base_url}}/talks/{{a_id}}
 HTTP 200
 [Asserts]
 jsonpath "$.status" == "ACCEPTED"
@@ -140,14 +153,14 @@ PUT {{base_url}}/talks/{{a_id}}/status
 { "status": "WAITLISTED" }
 HTTP 409
 
-# R4: a rejected talk can't be withdrawn; PO-1 reject again is fine
+# R4: a rejected talk can't be withdrawn; rejecting it again is refused too (final)
 PUT {{base_url}}/talks/{{b_id}}/status
 { "status": "REJECTED" }
 HTTP 200
 
 PUT {{base_url}}/talks/{{b_id}}/status
 { "status": "REJECTED" }
-HTTP 200
+HTTP 409
 
 POST {{base_url}}/talks/{{b_id}}/withdraw
 { "speakerId": {{speaker_id}} }

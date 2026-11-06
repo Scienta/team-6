@@ -183,20 +183,25 @@ class AcceptanceTest {
         assertEquals(400, api.send("PUT", "/talks/abc/status", "{\"status\":\"REJECTED\"}").status);
     }
 
-    // PO-1: repeating the decision a talk already has is a 200, and changes nothing
+    // Repeating the decision a talk already has isn't an allowed transition: 409, unchanged. (PO-1 said 200; the
+    // harness failed check-3 and check-5 on ACCEPTED twice, ticks 108-110: "the committee's decision is final".)
     @Test
-    void repeatingTheSameDecisionIsHarmless() {
+    void repeatingTheSameDecisionIsRefused() {
         long speaker = api.speaker();
         long accepted = ratedTalk(speaker);
         long rejected = api.talk(speaker);
         long waitlisted = api.talk(speaker);
-        api.decide(accepted, "ACCEPTED");
-        api.decide(rejected, "REJECTED");
-        api.decide(waitlisted, "WAITLISTED");
         assertTalk("ACCEPTED", api.decide(accepted, "ACCEPTED"));
         assertTalk("REJECTED", api.decide(rejected, "REJECTED"));
         assertTalk("WAITLISTED", api.decide(waitlisted, "WAITLISTED"));
-        assertEquals("WAITLISTED", api.status(waitlisted));
+        assertRefused(409, api.decide(accepted, "ACCEPTED"), accepted, "ACCEPTED");
+        assertRefused(409, api.decide(rejected, "REJECTED"), rejected, "REJECTED");
+        assertRefused(409, api.decide(waitlisted, "WAITLISTED"), waitlisted, "WAITLISTED");
+        // a waitlisted talk can still be decided after a refused repeat
+        long waitlistedRated = ratedTalk(speaker);
+        assertTalk("WAITLISTED", api.decide(waitlistedRated, "WAITLISTED"));
+        assertRefused(409, api.decide(waitlistedRated, "WAITLISTED"), waitlistedRated, "WAITLISTED");
+        assertTalk("ACCEPTED", api.decide(waitlistedRated, "ACCEPTED"));
     }
 
     // PO-2: withdrawn and rejected talks don't count towards the 3-talk limit
