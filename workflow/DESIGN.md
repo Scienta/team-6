@@ -254,7 +254,7 @@ instead of repeating these.
 
 | # | Requirement |
 |---|---|
-| D1700 | Java **25** (Temurin, LTS) and Spring Boot **4.1.2**, for build and runtime. `pom.xml` `java.version` and both `Dockerfile` stages use the same major version. Changing either is a platform change under D1601. **[ours]** |
+| D1700 | Java **25** (Temurin, LTS) and Spring Boot **4.1.2**, for build and runtime. `pom.xml` `java.version`, both `Dockerfile` stages and the `setup-java` step in `.github/workflows/deploy.yml` use the same major version; change them together (CI on Java 11 failed with "release version 25 not supported" after the upgrade). Changing the version is a platform change under D1601. **[ours]** |
 | D1701 | Local runs and the gate use the production JDK: `verify.sh` picks it from `pom.xml` (override `JAVA_HOME_OVERRIDE`). Different JDKs format dates differently (D1250, D1650), so a green gate on another JDK proves nothing. **[ours]** |
 | D1702 | Every format a spec fixes is produced explicitly in our code, never by JVM, locale or Jackson defaults (D1650, D1903). |
 | D1703 | Reported versions are real, never hard-coded (D1602). |
