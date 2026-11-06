@@ -121,21 +121,22 @@ class FormatsTest {
     // ---------------------------------------------------------------- averageRating
 
     @Test
-    void averageRatingRoundsHalvesUp() {
+    void averageRatingHasTwoDecimals() {
         long talk = api.talk(api.speaker());
         api.rate(talk, 1, 4);
         api.rate(talk, 2, 4);
         api.rate(talk, 3, 4);
         api.rate(talk, 4, 5);
-        // 4.25 shows as 4.3 (specs/ratings.md)
-        assertEquals("4.3", api.talkById(talk).json.get("averageRating").asText());
+        // ratings-cr: two decimals, half to even, so 4.25 stays 4.25 (was 4.3 under specs/ratings.md)
+        assertTrue(api.talkById(talk).body.contains("\"averageRating\":4.25"), api.talkById(talk).body);
     }
 
     @Test
-    void averageRatingOfAWholeNumberIsWrittenWithOneDecimal() {
+    void averageRatingOfAWholeNumberIsWrittenWithTwoDecimals() {
         long talk = api.talk(api.speaker());
         api.rate(talk, 1, 4);
-        assertEquals("4.0", api.talkById(talk).json.get("averageRating").toString());
+        // ratings-cr PO-2: always two decimals. Checked on the raw body: the tests' JSON tree would read 4.00 as 4.0.
+        assertTrue(api.talkById(talk).body.contains("\"averageRating\":4.00"), api.talkById(talk).body);
     }
 
     // ---------------------------------------------------------------- CSV export (ReportController)

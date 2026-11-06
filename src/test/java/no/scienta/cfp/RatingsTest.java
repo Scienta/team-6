@@ -123,9 +123,10 @@ class RatingsTest {
         long s1 = api.speaker();
         long s2 = api.speaker();
         long unratedOld = api.talk(s1);
-        long b = api.talk(s1);   // 4,4,4,5 = 4.25 -> 4.3, 4 ratings
-        long c = api.talk(s1);   // 4,5,4   = 4.33 -> 4.3, 3 ratings
-        long top = api.talk(s2); // 5 -> 5.0, 1 rating
+        // ratings-cr: two decimals, half to even (was one decimal, where b and c tied at 4.3)
+        long b = api.talk(s1);   // 4,4,4,5 = 4.25, 4 ratings
+        long c = api.talk(s1);   // 4,5,4   = 4.333 -> 4.33, 3 ratings
+        long top = api.talk(s2); // 5 -> 5.00, 1 rating
         long d = api.talk(s2);   // same as c, but newer
         long unratedNew = api.talk(s2);
         rateAll(b, 4, 4, 4, 5);
@@ -135,9 +136,9 @@ class RatingsTest {
 
         List<Long> mine = Arrays.asList(unratedOld, b, c, top, d, unratedNew);
         List<Long> ranked = Api.ids(api.get("/talks?sort=rating")).stream().filter(mine::contains).collect(Collectors.toList());
-        assertEquals(Arrays.asList(top, b, c, d, unratedOld, unratedNew), ranked);
+        assertEquals(Arrays.asList(top, c, d, b, unratedOld, unratedNew), ranked, "c and d tie at 4.33 with 3 ratings: oldest first");
 
-        assertEquals(Arrays.asList(b, c, unratedOld), Api.ids(api.get("/talks?sort=rating&speakerId=" + s1)));
+        assertEquals(Arrays.asList(c, b, unratedOld), Api.ids(api.get("/talks?sort=rating&speakerId=" + s1)));
     }
 
     @Test

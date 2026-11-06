@@ -87,9 +87,9 @@ class AdminReportsTest {
 
         String expected = "id;title;format;minutes;level;speaker;status;submitted;rating;ratings\n"
                 + workshop + ";\"Semi;colon 'quoted'\";Workshop;120;Advanced;Ada Lovelace;SUBMITTED;"
-                + submitted(workshopTalk) + ";4,3;4\n"
+                + submitted(workshopTalk) + ";4,25;4\n" // ratings-cr: the talk's average, two decimals
                 + lightning + ";Lightning talk;Lightning 10;10;Beginner;Ada Lovelace;SUBMITTED;"
-                + submitted(lightningTalk) + ";4,0;1\n";
+                + submitted(lightningTalk) + ";4,00;1\n";
         assertEquals(expected, r.body());
     }
 

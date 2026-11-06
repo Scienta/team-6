@@ -1,7 +1,7 @@
 # Plan: ratings-cr
 
 Change request: `specs/ratings-cr.md` (V1), our decisions: `workflow/specs/ratings-cr.md`, rules
-in `workflow/DESIGN.md` D1204, D1206 (changed in place), D1208. Status: draft.
+in `workflow/DESIGN.md` D1204, D1206 (changed in place), D1208. Status: approved (tick 171, PO-1..2 answered).
 
 ## Current state
 
@@ -20,7 +20,7 @@ in `workflow/DESIGN.md` D1204, D1206 (changed in place), D1208. Status: draft.
 | Layer | File | Change |
 |---|---|---|
 | DAO | `RatingDao.statsByTalk` | also `MAX(score)`, `MIN(score)` → `{count, sum, max, min}` (same single query) |
-| service | `ConferenceService.calculateAverage` | `(count ≥ 5 ? (sum − max − min, count − 2) : (sum, count))`, `BigDecimal.divide(…, 2, HALF_EVEN)`, as `Double`. A `static` method, so it can be unit-tested with the spec's tie examples. |
+| service | `ConferenceService.calculateAverage` | `(count ≥ 5 ? (sum − max − min, count − 2) : (sum, count))`, `BigDecimal.divide(…, 2, HALF_EVEN)`, kept as a `BigDecimal` (scale 2, PO-2). `TalkDto.averageRating` becomes `BigDecimal`; the ranking uses `compareTo`, and `/admin/stats` uses `doubleValue()` (its result is unchanged). A `static` method, so it can be unit-tested with the spec's tie examples. |
 | service | ranking | unchanged code; it already compares `averageRating`, which is now the new value (R4) |
 | other | `/admin/stats`, CSV | no change (D1208) |
 
@@ -35,18 +35,13 @@ in `workflow/DESIGN.md` D1204, D1206 (changed in place), D1208. Status: draft.
 | R3 `ratingCount` counts all (6 above → `6`) | in the R1 tests | ✔ |
 | R4 ranking flips because of trimming (outlier talk) | `RatingsCrTest#rankingUsesTheNewAverage` | ✔ |
 | a replaced rating recalculates | `RatingsCrTest#replacingARatingRecalculates` | - |
-| existing pins | update to the new values with `// ratings-cr` comments: `4.3` → `4.25`; `4.0` and `4.5` unchanged | ✔ (`ratings.hurl`, `spring-boot-4.hurl`) |
+| existing pins | update to the new values with `// ratings-cr` comments: `4.3` → `4.25`, `4.0` → `4.00`, `4.5` → `4.50` (check the raw JSON text; the tests' Jackson 2 tree drops trailing zeros) |
+| PO-2 always two decimals in the raw JSON (`"averageRating":4.00`) | `RatingsCrTest#averageIsAlwaysWrittenWithTwoDecimals` | ✔ | ✔ (`ratings.hurl`, `spring-boot-4.hurl`) |
 
 ## Risks and open questions
 
-**PO?** (numbered; bold = our default):
-1. **Switch-over.** Deploying this changes what the *current* ratings checks see (`4.3` becomes
-   `4.25`). Do the harness's ratings checks switch to the new rule when the change request is
-   released, or when we claim it? **Default: implement and verify now; ship, then a person claims
-   ratings-cr in the same tick. Ask the organisers if unsure.**
-2. **"Two decimals" in JSON.** **A JSON number with the value rounded to 2 decimals (`4.25`, `4.5`,
-   `4.0`)**, or always written with two decimals (`4.50`, `4.00`)?
-
+- PO-1: the claim switches the checks → push, wait for `/health`, claim at once (see DESIGN D1210).
+- PO-2: always two decimals (`4.00`).
 - Bleed risk: ratings is claimed. A wrong switch-over turns it FAULTY. Watch ratings *and*
   ratings-cr after the deploy.
 - `FormatsTest#averageRatingOfAWholeNumberIsWrittenWithOneDecimal` (a teammate's pin, `4.0`) may need
@@ -54,6 +49,6 @@ in `workflow/DESIGN.md` D1204, D1206 (changed in place), D1208. Status: draft.
 
 ## Done when
 
-- [ ] every rule has a test, failing before the change; the old pins are updated
-- [ ] `workflow/scripts/verify.sh` passes
+- [x] every rule has a test, failing before the change; the old pins are updated
+- [x] `workflow/scripts/verify.sh` passes (JDK 27 standing in for 25)
 - [ ] deployed `/health` reports the new SHA; ratings **and** ratings-cr checks OK; claim log in `REVIEW.md`

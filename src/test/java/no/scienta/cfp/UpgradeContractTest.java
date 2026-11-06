@@ -72,7 +72,7 @@ class UpgradeContractTest {
         api.rate(talk, 3, 4);
         api.rate(talk, 4, 5);
         JsonNode rated = api.get("/talks/" + talk).json;
-        assertEquals("4.3", rated.get("averageRating").asText(), "P11: 4, 4, 4, 5 averages 4.25, shown as 4.3");
+        assertEquals("4.25", rated.get("averageRating").asText(), "P11 (ratings-cr): 4, 4, 4, 5 averages 4.25, shown as 4.25");
         assertEquals(4, rated.get("ratingCount").asInt());
     }
 
@@ -178,17 +178,19 @@ class UpgradeContractTest {
         api.rate(a3, 2, 3);
         assertEquals(java.util.Arrays.asList(a2, a3, a1), ranked(a), "P12: same average, more ratings first, then oldest");
 
-        // Speaker B: 4.33 and 4.25 both show 4.3, so the rounded average ties and the count decides; unrated last.
+        // Speaker B: both show 4.33, so the rounded average ties and the count decides; unrated last. ratings-cr: b1 is
+        // 4,4,5 = 13/3; b2 has 8 ratings, the 3 and one 5 are left out, 4,4,4,4,5,5 = 26/6, the same 4.333.
+        // (Before ratings-cr this used 4.33 vs 4.25, which tied at one decimal.)
         long b = api.speaker();
         long b1 = api.talk(b), b2 = api.talk(b), b3 = api.talk(b);
         api.rate(b1, 1, 4);
         api.rate(b1, 2, 4);
         api.rate(b1, 3, 5);
-        api.rate(b2, 1, 4);
-        api.rate(b2, 2, 4);
-        api.rate(b2, 3, 4);
-        api.rate(b2, 4, 5);
-        assertEquals(java.util.Arrays.asList(b2, b1, b3), ranked(b), "P12: the rounded average ties (4.3), more ratings first; unrated last");
+        int[] eight = {3, 5, 4, 4, 4, 4, 5, 5};
+        for (int i = 0; i < eight.length; i++) {
+            api.rate(b2, i + 1, eight[i]);
+        }
+        assertEquals(java.util.Arrays.asList(b2, b1, b3), ranked(b), "P12: the rounded average ties (4.33), more ratings first; unrated last");
     }
 
     private java.util.List<Long> ranked(long speaker) {

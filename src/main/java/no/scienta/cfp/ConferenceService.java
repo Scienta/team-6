@@ -198,7 +198,7 @@ public class ConferenceService {
                 }
             }
             rated.sort((a, b) -> {
-                int c = Double.compare(b.averageRating, a.averageRating);
+                int c = b.averageRating.compareTo(a.averageRating);
                 if (c != 0) {
                     return c;
                 }
@@ -233,15 +233,21 @@ public class ConferenceService {
             long[] s = stats.get(t.id);
             int count = s == null ? 0 : (int) s[0];
             t.ratingCount = count;
-            t.averageRating = count == 0 ? null : calculateAverage(s[1], count);
+            t.averageRating = count == 0 ? null : calculateAverage(count, s[1], s[2], s[3]);
             t.coSpeakerIds = coSpeakers.getOrDefault(t.id, new ArrayList<>());
         }
     }
 
-    // 1 decimal, half up (4.25 -> 4.3)
-    private Double calculateAverage(long total, int count) {
-        return BigDecimal.valueOf(total).divide(BigDecimal.valueOf(count), 1, RoundingMode.HALF_UP).doubleValue();
-        // return Utils.roundRating((double) total / count);
+    /// The average a talk shows (ratings-cr, DESIGN.md D1204, D1208): with 5 or more ratings, exactly one highest and
+    /// one lowest score are left out; then rounded with [#roundAverage].
+    static BigDecimal calculateAverage(int count, long sum, long max, long min) {
+        return count >= 5 ? roundAverage(sum - max - min, count - 2) : roundAverage(sum, count);
+    }
+
+    /// Two decimals, ties to the even neighbour, decided on the exact value (`25/8 = 3.125` → `3.12`), and always
+    /// written with two decimals (`4.00`, PO-2): a scale-2 `BigDecimal`, which JSON writes as `4.00`.
+    static BigDecimal roundAverage(long sum, long count) {
+        return BigDecimal.valueOf(sum).divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_EVEN);
     }
 
     // ---------------------------------------------------------------- co-speakers
@@ -473,7 +479,7 @@ public class ConferenceService {
             }
             minutes += t.durationMinutes;
             if (t.averageRating != null) {
-                ratingSum += t.averageRating;
+                ratingSum += t.averageRating.doubleValue();
                 rated++;
             }
         }

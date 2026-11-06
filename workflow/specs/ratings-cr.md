@@ -20,18 +20,19 @@ else about ratings stays. Open questions are marked **PO?**.
 |---|---|
 | how | `RatingDao.statsByTalk` also returns `MAX(score)` and `MIN(score)`. At ≥5 ratings: `(sum − max − min) / (count − 2)`. Exact integer division with `BigDecimal`, scale 2, `RoundingMode.HALF_EVEN`, so a tie is decided on the exact value (`25/8 = 3.125` → `3.12`). No floating point before rounding. |
 | exactly 5 ratings | trimmed (3 count); 4 ratings → all 4 count |
-| all ratings equal (e.g. 5 × `4`) | trimmed to 3 × `4` → `4.0` |
+| all ratings equal (e.g. 5 × `4`) | trimmed to 3 × `4` → `4.00` |
 | a rating replaced (same reviewer) | recalculated from the current scores (as today) |
-| JSON form of the number | a JSON number with the value rounded to 2 decimals, written as Jackson writes a `Double` today: `4.25`, `4.5`, `4.0`. **PO?** (could be always two decimals: `4.50`, `4.00`) |
+| JSON form of the number (PO-2) | always two decimals: `4.00`, `4.50`, `4.25` (a `BigDecimal` with scale 2). The CSV report prints `4,00`. |
 | `/admin/stats` `averageRating` (no spec, D1951) | unchanged. It averages the talks' averages with its own rounding; the change request is about a talk's average. |
 | `/admin/talks.csv` rating column (no spec) | follows the new value (`4,25`), as it prints the talk's average |
-| switch-over | the code changes the values the current ratings checks see. **PO?** (see plan) |
+| switch-over (PO-1) | the claim switches the checks: push, wait for `/health`, then claim at once |
 
 ## Product owner answers
 
 | # | Question | Answer | Asked (tick) | Test |
 |---|---|---|---|---|
-| (none yet) | | | | |
+| PO-1 | Do the ratings checks switch at release or at claim? | at the claim | 171 | process: `/ship`, then claim in the same tick |
+| PO-2 | "Two decimals" in JSON: `4.0` or `4.00`? | always two: `4.00` | 171 | `RatingsCrTest#averageIsAlwaysWrittenWithTwoDecimals`, hurl "# PO-2" |
 
 ## Evidence
 

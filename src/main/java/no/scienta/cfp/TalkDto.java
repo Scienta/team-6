@@ -1,5 +1,6 @@
 package no.scienta.cfp;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -25,7 +26,7 @@ public class TalkDto {
     // The UTC day of submittedAt, yyyy-MM-dd, computed as a string (Utils.utcDay). A java.sql.Date here is midnight in
     // the JVM's default zone, which shifts the day as soon as anything formats it in UTC.
     public String submittedOn;
-    public Double averageRating;
+    public BigDecimal averageRating;  // scale 2, written as 4.00 (ratings-cr PO-2)
     public int ratingCount;
     public List<Long> coSpeakerIds = new ArrayList<>();
 }

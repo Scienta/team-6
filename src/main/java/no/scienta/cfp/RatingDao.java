@@ -27,13 +27,15 @@ public class RatingDao {
     }
 
     /**
-     * {count, total} per talk, for many talks in one query. Talks nobody has rated are missing from the map.
+     * {count, total, max, min} per talk, for many talks in one query (max and min for the ratings-cr trim). Talks nobody
+     * has rated are missing from the map.
      */
     public Map<Long, long[]> statsByTalk(List<Long> talkIds) {
         Map<Long, long[]> stats = new HashMap<>();
-        jdbc.query("SELECT talk_id, COUNT(*) AS cnt, SUM(score) AS total FROM rating WHERE talk_id = ANY(?) GROUP BY talk_id",
+        jdbc.query("SELECT talk_id, COUNT(*) AS cnt, SUM(score) AS total, MAX(score) AS hi, MIN(score) AS lo "
+                        + "FROM rating WHERE talk_id = ANY(?) GROUP BY talk_id",
                 ps -> ps.setArray(1, ps.getConnection().createArrayOf("bigint", talkIds.toArray())),
-                (RowCallbackHandler) rs -> stats.put(rs.getLong("talk_id"), new long[] {rs.getLong("cnt"), rs.getLong("total")}));
+                (RowCallbackHandler) rs -> stats.put(rs.getLong("talk_id"), new long[] {rs.getLong("cnt"), rs.getLong("total"), rs.getLong("hi"), rs.getLong("lo")}));
         return stats;
     }
 

@@ -297,7 +297,7 @@ HTTP 200
 GET {{base_url}}/talks/{{talk_1}}
 HTTP 200
 [Asserts]
-jsonpath "$.averageRating" == 4.3
+jsonpath "$.averageRating" == 4.25  # ratings-cr: two decimals, half to even (was 4.3)
 jsonpath "$.ratingCount" == 4
 
 GET {{base_url}}/talks/{{talk_2}}
