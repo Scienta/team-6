@@ -40,7 +40,7 @@ spec, assume this document is stale until someone has reconciled it.
 | Ratings | D1200–D1299 | `specs/ratings.md` (Version 1) | — | base, claimed |
 | Co-speakers | D1300–D1399 | `specs/co-speakers.md` (Version 1) | `workflow/specs/co-speakers.md` | released tick 0, claimed tick 70 |
 | Acceptance | D1400–D1499 | `specs/acceptance.md` (Version 1) | `workflow/specs/acceptance.md` | released tick 20, unclaimed |
-| Workshop registration | D1500–D1599 | `specs/workshop-registration.md` (Version 1) | not written yet | released tick 67, unclaimed |
+| Workshop registration | D1500–D1599 | `specs/workshop-registration.md` (Version 1) | `workflow/specs/workshop-registration.md` | released tick 67, implemented (not yet shipped), unclaimed |
 | Platform / Spring Boot 4 | D1600–D1699 | `specs/spring-boot-4.md` (Version 1) | `workflow/specs/spring-boot-4.md` | released tick 40, claimed tick 98 |
 | Non-functional requirements | D1700–D1799 | `AGENTS.md` (deploy contract, platform), `specs/spring-boot-4.md` | ours | — |
 | Cross-cutting | D1900–D1999 | several | — | — |
@@ -193,9 +193,9 @@ don't count towards the 3-talk limit (amends D1106). PO-3 unregistered withdrawe
 
 ## D1500–D1599 Workshop registration
 
-Source: `specs/workshop-registration.md` (Version 1). Released tick 67, **unclaimed, not implemented,
-no `workflow/specs/` decisions yet** — the status codes below are *unanswered questions*, not
-decisions.
+Source: `specs/workshop-registration.md` (Version 1), decisions in
+`workflow/specs/workshop-registration.md` (PO-1..4 answered tick 101). Released tick 67, implemented,
+**unclaimed**. Code: `WorkshopController`, `WorkshopService`, `RegistrationDao`, `Registration` (record).
 
 | # | Rule |
 |---|---|
@@ -203,16 +203,21 @@ decisions.
 | D1501 | `{id}` is the **talk id**. Only talks with `format=WORKSHOP` **and** `status=ACCEPTED` take registrations. |
 | D1502 | Capacity is exactly **20** per workshop, "and never more". Registration opens to everyone at once — expect a rush (see D1901). |
 | D1503 | One registration per email per workshop, compared **case-insensitively** (as D1003). |
-| D1504 | The response echoes the email **as the attendee typed it** — so store the normalised key *and* the original. |
+| D1504 | The response echoes the email **as the attendee typed it**: stored as typed; uniqueness on `lower(email)` (unique index `(talk_id, lower(email))`). |
 | D1505 | The same person may register for several different workshops. |
 | D1506 | If a workshop is withdrawn later, everyone already registered **stays** on its list. |
 | D1507 | `GET /workshops/{id}/registrations` → `200`, the list in registration order. |
 | D1508 | `Registration` = `{ id, workshopId, name, email }`. |
+| D1550 | **[ours]** `POST` new → `201` + Registration. `name`/`email` missing, null, not a string or blank → `400`. Body not a JSON object / no body → `400`. |
+| D1551 | **[PO-4]** The email must look like an email: one `@`, no whitespace (Unicode too) or control characters, a domain of ≥2 non-empty dot-separated labels → else `400`. Not trimmed: `" ada@example.com "` → `400`. |
+| D1552 | **[ours/PO-1]** Unknown talk id → `404` (POST and GET). A talk that isn't a `WORKSHOP` → `400` (POST and GET; precedent D1350). |
+| D1553 | **[PO-3]** Email already registered for this workshop (any letter case) → `200` with the **existing** registration (email as first typed), nothing changes — also when the workshop is full or withdrawn. |
+| D1554 | **[PO-2]** Workshop not `ACCEPTED` → `409`. Full (20) → `409` (precedent: limits D1301, the 3-talk limit). |
+| D1555 | **[ours]** Check order: `400` body/email → `404` unknown → `400` not a workshop → `200` already registered → `409` not accepted → `409` full. |
+| D1556 | **[ours]** Concurrency: one `@Transactional` that locks the talk row (`TalkDao.lockForUpdate`, the same lock as D14xx decisions and withdrawals), then duplicate, status and count, then insert. The unique index is a backstop mapped to `409`. Tested: 30 concurrent → 20 × `201` + 10 × `409`; 5 concurrent same-email → 1 × `201` + 4 × `200`, same id. |
 
-**Open — needs `/plan-feature` and probably the PO:** status code for a full workshop (409?), for a
-talk that is not a `WORKSHOP` or not `ACCEPTED` (404? 409?), for a duplicate email (409? 200 with
-the existing registration?), for missing name/email (400), and for an unknown talk id (404).
-Attendees are **not** speakers — there is no shared table, despite D1003 using the same rule.
+Riskiest after claiming (no harness-verified precedent): D1553 (`200`) and D1554 not accepted
+(`409`). Attendees are **not** speakers: no shared table, although D1503 uses the same rule as D1003.
 
 ## D1600–D1699 Platform / Spring Boot 4
 

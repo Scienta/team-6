@@ -1,4 +1,4 @@
-# Plan: acceptance
+€# Plan: acceptance
 
 Spec: `specs/acceptance.md` (V1), our decisions: `workflow/specs/acceptance.md`. Status: approved (tick 38, with PO answers PO-1..3).
 

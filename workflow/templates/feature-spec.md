@@ -12,6 +12,9 @@ marked **PO?**.
 
 ## Our decisions
 
+A status code the feature request doesn't give is a guess. Follow the codes the harness already
+accepts for the same kind of request, and mark anything without a precedent **PO?**.
+
 Follow the existing conventions unless the spec says otherwise: 400 for invalid input, 404 for an
 unknown resource in the path, 409 for a business-rule conflict, 200 for idempotent repeats.
 

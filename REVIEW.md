@@ -63,12 +63,22 @@ claimed or skipped, at which tick, and the evidence you held before claiming. Fo
 
 <!-- Failures the harness found after you claimed (or after a deploy), and why your own review missed them. -->
 
-**Co-speakers, adding the main speaker (harness `co-speakers/check-2`, FAULTY ticks 71–90).** We
-answered `409` when a talk's main speaker was added as its co-speaker. The feature request gives no
-status codes, so `409` was our own guess, and every test we had checked that guess: our review
-compared code with our decisions, not decisions with what the check wanted. The PO answered `200`,
-talk unchanged (tick 75), but the check stayed FAULTY at tick 90 on the new code; `400` finally
-passed (co-speakers PO-2). Lesson: a PO answer is a hypothesis until the harness confirms it.
+**Co-speakers check-2: the main speaker added as their own co-speaker (FAULTY ticks 71-100).** The
+feature request only says "the main speaker can't also be a co-speaker" and lists no error codes. We
+invented `409`, by analogy with "at most two co-speakers", and the harness rejected it from the tick
+after the claim. We then asked the product owner, who said `200, nothing changes`. We shipped that,
+and the harness rejected it too (tick 90, on the new code). `400` passed at tick 101.
+
+- *Why our review missed it:* the independent review checked the code against **our** decisions,
+  and our decisions were the bug. All our tests passed because they encoded the same guess.
+- *Why the second try missed:* the PO answer was a business opinion, not the checks' contract, and
+  we shipped it without a way to verify it before the next tick.
+- *What we changed:* `/verify-feature` now lists every status code that the feature request doesn't
+  give and that we invented, and compares each with how the base features answer the same *kind*
+  of request. A bad request gets `400` (as `POST /talks` with a speaker that isn't allowed) and a
+  limit or duplicate gets `409`. Each invented code is flagged as **PO?** before claiming. The
+  workshop-registration spec starts from this rule. Logs (`logs.sh`) plus `harness.sh timeline`
+  showed which response failed, and when a deploy actually went live.
 
 **(Caught by our own gate, not the harness:) `ratedAtDisplay` and the JDK.** The first run of
 `verify.sh` failed `ratings.hurl` because the local service ran on JDK 27, which puts a narrow

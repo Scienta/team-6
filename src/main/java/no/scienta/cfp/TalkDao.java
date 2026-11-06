@@ -55,10 +55,10 @@ public class TalkDao {
 
     /**
      * Locks the talk row until the transaction ends, so concurrent status changes run one at a time.
-     * Returns {status, speaker_id}, or null when there is no such talk.
+     * Returns {status, speaker_id, format}, or null when there is no such talk.
      */
     public Map<String, Object> lockForUpdate(long id) {
-        List<Map<String, Object>> rows = jdbc.queryForList("SELECT status, speaker_id FROM talk WHERE id = ? FOR UPDATE", id);
+        List<Map<String, Object>> rows = jdbc.queryForList("SELECT status, speaker_id, format FROM talk WHERE id = ? FOR UPDATE", id);
         return rows.isEmpty() ? null : rows.get(0);
     }
 
