@@ -60,6 +60,28 @@ class SchedulingTest {
         return accepted(api.speaker(), "PRESENTATION");
     }
 
+    // Fixtures for the concurrency tests, straight into the database: they test racing PUT/DELETEs on the programme,
+    // not how a talk gets accepted (the rule tests above build theirs through the API). ~1 ms instead of 5 requests.
+
+    private long speakerRow() {
+        return jdbc.queryForObject("INSERT INTO speaker (name, email) VALUES ('Fixture', ?) RETURNING id", Long.class,
+                "fixture-" + java.util.UUID.randomUUID() + "@example.com");
+    }
+
+    private long acceptedRow(long speaker) {
+        return jdbc.queryForObject("INSERT INTO talk (title, format, duration, level, status, speaker_id, submitted_at) "
+                + "VALUES ('Talk', 'PRESENTATION', 45, 'BEGINNER', 'ACCEPTED', ?, ?) RETURNING id",
+                Long.class, speaker, System.currentTimeMillis());
+    }
+
+    private long acceptedRow() {
+        return acceptedRow(speakerRow());
+    }
+
+    private void coSpeakerRow(long talk, long speaker) {
+        jdbc.update("INSERT INTO talk_co_speaker (talk_id, speaker_id) VALUES (?, ?)", talk, speaker);
+    }
+
     private Api.Res put(String room, String slot, Object talkId) {
         return api.send("PUT", "/programme/" + room + "/" + slot, "{\"talkId\":" + talkId + "}");
     }
@@ -302,7 +324,7 @@ class SchedulingTest {
             List<Long> talks = new ArrayList<>();
             List<HttpRequest> requests = new ArrayList<>();
             for (int i = 0; i < 12; i++) {
-                long t = accepted();
+                long t = acceptedRow();
                 talks.add(t);
                 requests.add(api.request("PUT", "/programme/R2/S3", "{\"talkId\":" + t + "}"));
             }
@@ -319,7 +341,7 @@ class SchedulingTest {
     void concurrentPutsOfOneTalk() {
         for (int round = 0; round < 3; round++) {
             jdbc.update("UPDATE programme_entry SET talk_id = NULL");
-            long talk = accepted();
+            long talk = acceptedRow();
             List<HttpRequest> requests = new ArrayList<>();
             for (String room : List.of("R1", "R2", "R3")) {
                 for (String slot : List.of("S1", "S2", "S3", "S4", "S5")) {
@@ -337,17 +359,17 @@ class SchedulingTest {
     void concurrentSpeakerClash() {
         for (int round = 0; round < 5; round++) {
             jdbc.update("UPDATE programme_entry SET talk_id = NULL");
-            long shared = api.speaker();
+            long shared = speakerRow();
             List<HttpRequest> requests = new ArrayList<>();
             for (int i = 0; i < 9; i++) {
                 long talk;
                 if (i % 2 == 0) {
-                    talk = accepted(api.speaker(), "PRESENTATION"); // shared as co-speaker
-                    assertEquals(200, api.send("PUT", "/talks/" + talk + "/co-speakers/" + shared, null).status);
+                    talk = acceptedRow(speakerRow()); // shared as co-speaker
+                    coSpeakerRow(talk, shared);
                 } else {
-                    talk = accepted(i < 6 ? shared : api.speaker(), "PRESENTATION"); // shared as main speaker (max 3 talks)
+                    talk = acceptedRow(i < 6 ? shared : speakerRow()); // shared as main speaker
                     if (i >= 6) {
-                        assertEquals(200, api.send("PUT", "/talks/" + talk + "/co-speakers/" + shared, null).status);
+                        coSpeakerRow(talk, shared);
                     }
                 }
                 String room = List.of("R1", "R2", "R3").get(i % 3);
@@ -365,8 +387,8 @@ class SchedulingTest {
     void putRacingTakeOutEndsConsistent() {
         for (int round = 0; round < 10; round++) {
             jdbc.update("UPDATE programme_entry SET talk_id = NULL");
-            long first = accepted();
-            long second = accepted();
+            long first = acceptedRow();
+            long second = acceptedRow();
             assertEquals(200, put("R1", "S4", first).status);
             List<Api.Res> answers = api.concurrently(List.of(
                     api.request("DELETE", "/programme/R1/S4", null),
