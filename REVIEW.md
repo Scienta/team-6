@@ -63,12 +63,12 @@ claimed or skipped, at which tick, and the evidence you held before claiming. Fo
 
 <!-- Failures the harness found after you claimed (or after a deploy), and why your own review missed them. -->
 
-**Co-speakers, adding the main speaker (harness `co-speakers/check-2`, FAULTY ticks 71–75).** We
-answered `409` when a talk's main speaker was added as its co-speaker; the check wanted the request
-to change nothing. The feature request gives no status codes, so `409` was our own guess, and every
-test we had checked that guess. Our review compared code with our decisions, not decisions with
-the business intent. The PO confirmed `200`, talk unchanged (co-speakers PO-2), and the fix shipped
-with a test.
+**Co-speakers, adding the main speaker (harness `co-speakers/check-2`, FAULTY ticks 71–90).** We
+answered `409` when a talk's main speaker was added as its co-speaker. The feature request gives no
+status codes, so `409` was our own guess, and every test we had checked that guess: our review
+compared code with our decisions, not decisions with what the check wanted. The PO answered `200`,
+talk unchanged (tick 75), but the check stayed FAULTY at tick 90 on the new code; `400` finally
+passed (co-speakers PO-2). Lesson: a PO answer is a hypothesis until the harness confirms it.
 
 **(Caught by our own gate, not the harness:) `ratedAtDisplay` and the JDK.** The first run of
 `verify.sh` failed `ratings.hurl` because the local service ran on JDK 27, which puts a narrow

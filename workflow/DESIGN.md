@@ -38,10 +38,10 @@ spec, assume this document is stale until someone has reconciled it.
 | Speakers | D1000–D1099 | `specs/speakers.md` (Version 1) | — | base, claimed |
 | Talks | D1100–D1199 | `specs/talks.md` (Version 1) | — | base, claimed |
 | Ratings | D1200–D1299 | `specs/ratings.md` (Version 1) | — | base, claimed |
-| Co-speakers | D1300–D1399 | `specs/co-speakers.md` (Version 1) | `workflow/specs/co-speakers.md` | released tick 0, unclaimed |
+| Co-speakers | D1300–D1399 | `specs/co-speakers.md` (Version 1) | `workflow/specs/co-speakers.md` | released tick 0, claimed tick 70 |
 | Acceptance | D1400–D1499 | `specs/acceptance.md` (Version 1) | `workflow/specs/acceptance.md` | released tick 20, unclaimed |
 | Workshop registration | D1500–D1599 | `specs/workshop-registration.md` (Version 1) | not written yet | released tick 67, unclaimed |
-| Platform / Spring Boot 4 | D1600–D1699 | `specs/spring-boot-4.md` (Version 1) | `workflow/specs/spring-boot-4.md` | released tick 40, unclaimed, implemented |
+| Platform / Spring Boot 4 | D1600–D1699 | `specs/spring-boot-4.md` (Version 1) | `workflow/specs/spring-boot-4.md` | released tick 40, claimed tick 98 |
 | Non-functional requirements | D1700–D1799 | `AGENTS.md` (deploy contract, platform), `specs/spring-boot-4.md` | ours | — |
 | Cross-cutting | D1900–D1999 | several | — | — |
 | Unspecified endpoints | D1950–D1969 | none — in the code only | — | — |
@@ -133,7 +133,7 @@ Source: `specs/ratings.md` (Version 1). Base feature, claimed, all checks OK.
 ## D1300–D1399 Co-speakers
 
 Source: `specs/co-speakers.md` (Version 1), decisions in `workflow/specs/co-speakers.md`.
-Released tick 0, **unclaimed**, implemented.
+Released tick 0, **claimed tick 70**.
 
 | # | Rule |
 |---|---|
@@ -145,7 +145,7 @@ Released tick 0, **unclaimed**, implemented.
 | D1305 | `GET /speakers/{id}/talks` and `?speakerId=` show only talks where they are the **main** speaker. |
 | D1306 | Co-speaking never counts towards the 3-talk limit; a speaker at the limit can still co-speak. |
 | D1307 | Removed then re-added goes to the **end** of the order. **[ours]** |
-| D1350 | **[ours]** PUT ok → `200` + full Talk. Already a co-speaker → `200` unchanged. Talk or speaker unknown → `404`. Speaker is the main speaker → `200`, talk unchanged, also when it already has 2 (PO-2, tick 75 — was `409` until harness `co-speakers/check-2` went FAULTY). Already 2 others → `409`. |
+| D1350 | **[ours]** PUT ok → `200` + full Talk. Already a co-speaker → `200` unchanged. Talk or speaker unknown → `404`. Speaker is the main speaker → `400`, talk unchanged, also when it already has 2 (PO-2: `409` was FAULTY ticks 71–89, `200` still FAULTY at tick 90, `400` passes `co-speakers/check-2`). Already 2 others → `409`. |
 | D1351 | **[ours]** DELETE ok → `200` + full Talk. Not a co-speaker, incl. unknown speaker → `404` unchanged (PO-1). Talk unknown → `404`. |
 | D1352 | **[ours]** Non-numeric path id → `400` (Spring type mismatch). |
 | D1353 | Concurrency: PUT locks the talk row `FOR UPDATE`, then counts and inserts in one transaction. Unique `(talk_id, speaker_id)` with `ON CONFLICT DO NOTHING` covers D1304 under double-clicks. |
@@ -217,7 +217,7 @@ Attendees are **not** speakers — there is no shared table, despite D1003 using
 ## D1600–D1699 Platform / Spring Boot 4
 
 Source: `specs/spring-boot-4.md` (Version 1), decisions in `workflow/specs/spring-boot-4.md` (which pins
-today's behaviour as P1–P20). Released tick 40, **unclaimed, implemented**: Spring Boot 4.1.2 on
+today's behaviour as P1–P20). Released tick 40, **claimed tick 98**: Spring Boot 4.1.2 on
 Java 25 (Temurin, LTS).
 
 | # | Rule |
