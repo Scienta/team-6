@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 // The deploy pipeline polls /health, not /actuator/health.
-// 200 only if the database answers within 5 s, else 503. version is the GIT_SHA baked into the image.
+// 200 only if the database answers within health.db-timeout-seconds (5 s, the deploy contract), else 503. version is the GIT_SHA baked into the image.
 // One probe at a time: while a SELECT 1 is still running, later requests wait on that same probe instead of
 // starting another, so a hung database can't pile up threads and pool connections.
 @RestController
@@ -29,19 +29,22 @@ public class HealthController {
 
     private final JdbcTemplate jdbc;
     private final String version;
+    private final int timeoutSeconds;
     private CompletableFuture<Integer> probe;
 
-    public HealthController(JdbcTemplate jdbc, @Value("${GIT_SHA:dev}") String version) {
+    public HealthController(JdbcTemplate jdbc, @Value("${GIT_SHA:dev}") String version,
+                            @Value("${health.db-timeout-seconds}") int timeoutSeconds) {
         this.jdbc = new JdbcTemplate(jdbc.getDataSource());
-        this.jdbc.setQueryTimeout(5);
+        this.jdbc.setQueryTimeout(timeoutSeconds);
         this.version = version;
+        this.timeoutSeconds = timeoutSeconds;
     }
 
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
         Map<String, String> body = new LinkedHashMap<>();
         try {
-            currentProbe().get(5, TimeUnit.SECONDS);
+            currentProbe().get(timeoutSeconds, TimeUnit.SECONDS);
             body.put("status", "ok");
             body.put("version", version);
             return ResponseEntity.ok(body);

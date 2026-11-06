@@ -17,6 +17,7 @@ argument-hint: <slug>
    2.7, `JdbcTemplate`, `ResponseStatusException`. New schema goes at the bottom of `schema.sql`
    with `IF NOT EXISTS`. Rules that must hold under concurrency lock a row with
    `SELECT … FOR UPDATE` inside `@Transactional` and have a constraint as a backstop.
-4. Re-run the feature's tests until green, then the whole suite with `./mvnw -q package`.
+4. Re-run the feature's tests until green, then `workflow/scripts/verify.sh --quick` (all tests except
+   `HealthTest`, plus every Hurl file). The full gate is `/verify-feature`'s job.
 5. Tick off the plan's checklist, note deviations in the plan, and hand over to `/verify-feature`.
    Don't commit or push: that's `/ship`.

@@ -24,7 +24,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * The deploy contract's GET /health: 200 with the baked-in version while the database answers, 503 within 5 s
  * when it doesn't. The database here is a container of its own, so the test can pause it without hurting others.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "GIT_SHA=0123abc")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"GIT_SHA=0123abc", "health.db-timeout-seconds=1"})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class HealthTest {
 
@@ -64,7 +64,8 @@ class HealthTest {
             long took = Duration.ofNanos(System.nanoTime() - started).toMillis();
             assertEquals(503, res.statusCode(), res.body());
             assertEquals("{\"status\":\"db-unavailable\",\"version\":\"0123abc\"}", res.body());
-            assertTrue(took < 6000, "took " + took + " ms");
+            // the timeout is 1 s here (5 s in production, see HealthContractTest)
+            assertTrue(took < 2000, "took " + took + " ms");
         } finally {
             unpause();
         }

@@ -4,7 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.UUID;
 
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -15,15 +15,17 @@ import org.testcontainers.containers.PostgreSQLContainer;
  */
 final class TestDatabase {
 
-    private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
-    private static final AtomicInteger COUNTER = new AtomicInteger();
+    // Reused across test runs when ~/.testcontainers.properties has testcontainers.reuse.enable=true; otherwise a fresh
+    // container per run, as before. Remove a reused one with: docker rm -f $(docker ps -q --filter label=org.testcontainers.reuse.hash)
+    private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine").withReuse(true);
 
     private TestDatabase() {
     }
 
     /** Creates an empty database and points the app's datasource at it. */
     static void fresh(DynamicPropertyRegistry registry) {
-        String name = "cfp_" + COUNTER.incrementAndGet();
+        // unique across runs, since a reused container keeps the databases of earlier runs
+        String name = "cfp_" + UUID.randomUUID().toString().replace("-", "");
         createDatabase(name);
         pointAt(registry, POSTGRES, name);
     }

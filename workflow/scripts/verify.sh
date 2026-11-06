@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # The gate a change passes before it is pushed, and again before a person claims a feature.
 #
-# Usage: workflow/scripts/verify.sh [--deployed]
+# Usage: workflow/scripts/verify.sh [--quick] [--deployed]
 #   1. ./mvnw package               (unit + Testcontainers tests; Docker must run)
 #   2. local service on Compose Postgres, then every examples/*.hurl against it
+#   --quick: skip HealthTest (~25 s of DB timeouts) and run Maven offline; for the implement loop only.
+#            /verify-feature and /ship run the full gate.
 #   --deployed: also run the hurl examples against TEAM_URL (writes test data to our live database)
 #
 # Env: JAVA_RUN  the java binary for the local service (default: JDK 11, else 17, else java)
@@ -15,11 +17,22 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
 port=18080
 log="$(mktemp -t cfp-verify).log"
+quick=false deployed=false
+for arg in "$@"; do
+  case "$arg" in
+    --quick) quick=true ;;
+    --deployed) deployed=true ;;
+    *) echo "usage: $0 [--quick] [--deployed]" >&2; exit 2 ;;
+  esac
+done
 
 step() { printf '\n==> %s\n' "$*"; }
 
-step "build and test (./mvnw package)"
-./mvnw -q package 2>&1 | grep -E 'Tests run:|FAIL|ERROR|BUILD' | grep -v 'Failures: 0, Errors: 0' || true
+mvn_args=(-q package)
+if $quick; then mvn_args=(-o -q package "-Dtest=!HealthTest" -Dsurefire.failIfNoSpecifiedTests=false); fi
+step "build and test (./mvnw ${mvn_args[*]})"
+rm -rf target/surefire-reports
+./mvnw "${mvn_args[@]}" 2>&1 | grep -E 'Tests run:|FAIL|ERROR|BUILD' | grep -v 'Failures: 0, Errors: 0' || true
 [ -f target/cfp.jar ] || { echo "build failed, no target/cfp.jar"; exit 1; }
 for f in target/surefire-reports/*.txt; do grep -h 'Tests run' "$f"; done
 if grep -lE 'Failures: [1-9]|Errors: [1-9]' target/surefire-reports/*.txt >/dev/null 2>&1; then
@@ -57,10 +70,10 @@ curl -fsS "http://localhost:$port/health"; echo
 step "hurl examples against localhost:$port"
 hurl --test --jobs 1 --variable "base_url=http://localhost:$port" examples/*.hurl
 
-if [ "${1:-}" = "--deployed" ]; then
+if $deployed; then
   url="$(gh variable get TEAM_URL 2>/dev/null || echo "https://fagsem-h2026-$(cat .fagdag/team).scienta.cloud")"
   step "hurl examples against $url"
   hurl --test --jobs 1 --variable "base_url=$url" examples/*.hurl
 fi
 
-step "PASSED (service log: $log)"
+if $quick; then step "PASSED (quick: HealthTest skipped; run the full gate before shipping) (service log: $log)"; else step "PASSED (service log: $log)"; fi

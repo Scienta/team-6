@@ -31,6 +31,7 @@ checkpoint.
   Rate-limited and never prints the token.
 - [`scripts/verify.sh`](scripts/verify.sh): `./mvnw package`, then the local service on Compose
   Postgres and every `examples/*.hurl` against it. `--deployed` also runs them against `TEAM_URL`.
+  `--quick` skips `HealthTest` and runs Maven offline, for the implement loop. Verify and ship run the full gate.
 - `.github/fagdag/logs.sh --tail 200 --since <RFC3339>`: the deployed container's logs, including
   our request log lines (`http : METHOD /path -> status ... req=... res=...`).
 
