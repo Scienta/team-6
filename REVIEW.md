@@ -63,7 +63,6 @@ claimed or skipped, at which tick, and the evidence you held before claiming. Fo
 
 <!-- Failures the harness found after you claimed (or after a deploy), and why your own review missed them. -->
 
-<<<<<<< Updated upstream
 **Co-speakers, adding the main speaker (harness `co-speakers/check-2`, FAULTY ticks 71–75).** We
 answered `409` when a talk's main speaker was added as its co-speaker; the check wanted the request
 to change nothing. The feature request gives no status codes, so `409` was our own guess, and every
@@ -78,7 +77,7 @@ fine. We made the gate run the production JDK, and the finding became the main r
 spring-boot-4 upgrade: Java 25 has the same locale data. The upgrade now writes the format
 explicitly instead of relying on locale data, pinned byte-exact by `UtilsTest` and
 `UpgradeContractTest` ([DESIGN.md](workflow/DESIGN.md) D1250, D1650, D1701).
-=======
+
 **Harness, ratings check-1, tick 99 (after the spring-boot-4 deploy).** One `POST /speakers` got no
 answer at all (status none, empty body), and the check was OK again at tick 100. Our deploy finished at
 13:03 and the ticks after it (93-98) were OK. A docs-only commit pushed right after ours triggered a
@@ -110,11 +109,6 @@ something the one before it missed:
 
 Why our first pass missed the review's findings: we pinned what the specs say and what the harness
 sends, but not the legacy behaviour that only lived in `application.properties`.
-
-(Earlier, also caught by our gate, not the harness: the first `verify.sh` run failed `ratings.hurl`
-because the local JDK put U+202F before AM/PM. That was the clue behind the P3 pin. Since the
-upgrade, the format is an explicit pattern and the gate runs on the `pom.xml` JDK.)
->>>>>>> Stashed changes
 
 ## 5. Reusable artifacts
 
