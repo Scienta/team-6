@@ -70,7 +70,7 @@ Withdrawing an already withdrawn talk stays a `409`, as the feature request says
   lock) is unchanged.
 - Unchanged: withdrawn and rejected talks still appear in `GET /talks` and the speaker's list, can
   still be rated, and can still get co-speakers.
-- `GET /statistics` (`byStatus`) and the CSV report pick up the new statuses without change.
+- `GET /admin/stats` (`byStatus`) and the CSV report pick up the new statuses without change.
 
 ## Concurrency
 

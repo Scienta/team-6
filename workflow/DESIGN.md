@@ -27,20 +27,21 @@ is a stable handle for tests, commits and review comments. Gaps between groups l
 Rules taken from a feature request cite it; rules that are our decision are marked **[ours]**.
 
 **Staleness warning.** This document is derived. Seven specs exist today and more drip in during the
-game; `acceptance` has already gone V1→V2. If `workflow/scripts/poll-specs.sh` reports a CHANGED
+game. All seven are `Version: 1` today (the separate `V:` line is not a version; it looks like the
+feature's weight). If `workflow/scripts/poll-specs.sh` reports a CHANGED
 spec, assume this document is stale until someone has reconciled it.
 
 ## Source map
 
 | Area | Rules | Feature request | Our decisions | Status |
 |---|---|---|---|---|
-| Speakers | D1000–D1099 | `specs/speakers.md` (V1) | — | base, claimed |
-| Talks | D1100–D1199 | `specs/talks.md` (V1) | — | base, claimed |
-| Ratings | D1200–D1299 | `specs/ratings.md` (V2) | — | base, claimed |
-| Co-speakers | D1300–D1399 | `specs/co-speakers.md` (V1) | `workflow/specs/co-speakers.md` | released tick 0, unclaimed |
-| Acceptance | D1400–D1499 | `specs/acceptance.md` (V2) | `workflow/specs/acceptance.md` | released tick 20, unclaimed |
-| Workshop registration | D1500–D1599 | `specs/workshop-registration.md` (V2) | not written yet | released tick 67, unclaimed |
-| Platform / Spring Boot 4 | D1600–D1699 | `specs/spring-boot-4.md` (V1) | `workflow/specs/spring-boot-4.md` | released tick 40, unclaimed, implemented |
+| Speakers | D1000–D1099 | `specs/speakers.md` (Version 1) | — | base, claimed |
+| Talks | D1100–D1199 | `specs/talks.md` (Version 1) | — | base, claimed |
+| Ratings | D1200–D1299 | `specs/ratings.md` (Version 1) | — | base, claimed |
+| Co-speakers | D1300–D1399 | `specs/co-speakers.md` (Version 1) | `workflow/specs/co-speakers.md` | released tick 0, unclaimed |
+| Acceptance | D1400–D1499 | `specs/acceptance.md` (Version 1) | `workflow/specs/acceptance.md` | released tick 20, unclaimed |
+| Workshop registration | D1500–D1599 | `specs/workshop-registration.md` (Version 1) | not written yet | released tick 67, unclaimed |
+| Platform / Spring Boot 4 | D1600–D1699 | `specs/spring-boot-4.md` (Version 1) | `workflow/specs/spring-boot-4.md` | released tick 40, unclaimed, implemented |
 | Cross-cutting | D1900–D1999 | several | — | — |
 | Unspecified endpoints | D1950–D1969 | none — in the code only | — | — |
 
@@ -83,7 +84,7 @@ Talk is returned by: `POST /talks`, `GET /talks/{id}`, `GET /talks` (all variant
 
 ## D1000–D1099 Speakers
 
-Source: `specs/speakers.md` (V1). Base feature, claimed, all checks OK.
+Source: `specs/speakers.md` (Version 1). Base feature, claimed, all checks OK.
 
 | # | Rule |
 |---|---|
@@ -97,7 +98,7 @@ Source: `specs/speakers.md` (V1). Base feature, claimed, all checks OK.
 
 ## D1100–D1199 Talks
 
-Source: `specs/talks.md` (V1). Base feature, claimed, all checks OK.
+Source: `specs/talks.md` (Version 1). Base feature, claimed, all checks OK.
 
 | # | Rule |
 |---|---|
@@ -114,7 +115,7 @@ Source: `specs/talks.md` (V1). Base feature, claimed, all checks OK.
 
 ## D1200–D1299 Ratings
 
-Source: `specs/ratings.md` (V2). Base feature, claimed, all checks OK.
+Source: `specs/ratings.md` (Version 1). Base feature, claimed, all checks OK.
 
 | # | Rule |
 |---|---|
@@ -130,7 +131,7 @@ Source: `specs/ratings.md` (V2). Base feature, claimed, all checks OK.
 
 ## D1300–D1399 Co-speakers
 
-Source: `specs/co-speakers.md` (V1), decisions in `workflow/specs/co-speakers.md`.
+Source: `specs/co-speakers.md` (Version 1), decisions in `workflow/specs/co-speakers.md`.
 Released tick 0, **unclaimed**, implemented.
 
 | # | Rule |
@@ -150,7 +151,7 @@ Released tick 0, **unclaimed**, implemented.
 
 ## D1400–D1499 Acceptance
 
-Source: `specs/acceptance.md` (V2), decisions in `workflow/specs/acceptance.md`.
+Source: `specs/acceptance.md` (Version 1), decisions in `workflow/specs/acceptance.md`.
 Released tick 20, **unclaimed**, implemented.
 
 | # | Rule |
@@ -191,7 +192,7 @@ don't count towards the 3-talk limit (amends D1106). PO-3 unregistered withdrawe
 
 ## D1500–D1599 Workshop registration
 
-Source: `specs/workshop-registration.md` (V2). Released tick 67, **unclaimed, not implemented,
+Source: `specs/workshop-registration.md` (Version 1). Released tick 67, **unclaimed, not implemented,
 no `workflow/specs/` decisions yet** — the status codes below are *unanswered questions*, not
 decisions.
 
@@ -214,7 +215,7 @@ Attendees are **not** speakers — there is no shared table, despite D1003 using
 
 ## D1600–D1699 Platform / Spring Boot 4
 
-Source: `specs/spring-boot-4.md` (V1), decisions in `workflow/specs/spring-boot-4.md` (which pins
+Source: `specs/spring-boot-4.md` (Version 1), decisions in `workflow/specs/spring-boot-4.md` (which pins
 today's behaviour as P1–P20). Released tick 40, **unclaimed, implemented**: Spring Boot 4.1.2 on
 Java 25 (Temurin, LTS).
 

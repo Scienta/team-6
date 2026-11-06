@@ -10,7 +10,7 @@ owner are marked **PO?**.
 |---|---|
 | R1 | A talk keeps its one main speaker (`speakerId`). Co-speakers are other registered speakers, added afterwards and removable. |
 | R2 | At most **two** co-speakers per talk. |
-| R3 | The main speaker can't be a co-speaker of their own talk. |
+| R3 | The main speaker is never a co-speaker of their own talk: adding them changes nothing (PO-2). |
 | R4 | Every talk shows `coSpeakerIds` in the order the co-speakers were added; `[]` when none. |
 | R5 | Adding someone who is already a co-speaker changes nothing. |
 | R6 | `GET /speakers/{id}/talks` (and `GET /talks?speakerId=`) still shows only the talks where they're the **main** speaker. |
