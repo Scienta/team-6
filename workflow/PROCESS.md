@@ -75,5 +75,6 @@ harness caught, reusable artifacts and one thing we'd do differently, plus links
   from `specs/<slug>.diff`.
 - Plans carry a status (`draft` → `approved` → `done`) and a "Done when" checklist that is ticked
   as the steps pass.
-- Local runs must match production: the service runs on JDK 11 (or 17) in `verify.sh`, because
-  JDK 20+ formats dates differently.
+- Technical requirements (runtime, platform limits, code structure, the gate) are the
+  non-functional section of [DESIGN.md](DESIGN.md), D1700+. For example, local runs use the
+  production JDK (D1701).

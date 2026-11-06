@@ -13,10 +13,9 @@ argument-hint: <slug>
    (`mainSpeakerCannotCoSpeak` for R3). Add or extend `examples/<slug>.hurl` with a `# Rn ...`
    comment per entry and `{{newUuid}}` in emails so it can run repeatedly. Run
    `./mvnw -q test -Dtest=<Feature>Test` and confirm the new tests fail for the right reason.
-3. **Code**, layer by layer as the plan says. Keep to the codebase's style: Java 25, Spring Boot
-   4.1, `JdbcTemplate`, `ResponseStatusException`. New schema goes at the bottom of `schema.sql`
-   with `IF NOT EXISTS`. Rules that must hold under concurrency lock a row with
-   `SELECT … FOR UPDATE` inside `@Transactional` and have a constraint as a backstop.
+3. **Code**, layer by layer as the plan says, within the non-functional requirements in
+   `workflow/DESIGN.md` (D1700+): code structure (D1730–D1731), schema changes (D1723),
+   concurrency (D1724), explicit formats (D1702).
 4. Re-run the feature's tests until green, then `workflow/scripts/verify.sh --quick` (all tests except
    `HealthTest`, plus every Hurl file). The full gate is `/verify-feature`'s job.
 5. Tick off the plan's checklist, note deviations in the plan, and hand over to `/verify-feature`.

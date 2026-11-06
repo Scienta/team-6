@@ -42,6 +42,7 @@ spec, assume this document is stale until someone has reconciled it.
 | Acceptance | D1400–D1499 | `specs/acceptance.md` (Version 1) | `workflow/specs/acceptance.md` | released tick 20, unclaimed |
 | Workshop registration | D1500–D1599 | `specs/workshop-registration.md` (Version 1) | not written yet | released tick 67, unclaimed |
 | Platform / Spring Boot 4 | D1600–D1699 | `specs/spring-boot-4.md` (Version 1) | `workflow/specs/spring-boot-4.md` | released tick 40, unclaimed, implemented |
+| Non-functional requirements | D1700–D1799 | `AGENTS.md` (deploy contract, platform), `specs/spring-boot-4.md` | ours | — |
 | Cross-cutting | D1900–D1999 | several | — | — |
 | Unspecified endpoints | D1950–D1969 | none — in the code only | — | — |
 
@@ -236,6 +237,58 @@ Java 25 (Temurin, LTS).
 > `-parameters` needed for `@PathVariable` names (every `/talks/{id}/…` route answered 500), and
 > `submittedOn` a day early east of UTC. Full list in `workflow/specs/spring-boot-4.md`. Any future
 > platform change must keep `UpgradeContractTest` and `examples/spring-boot-4.hurl` green.
+
+## D1700–D1799 Non-functional requirements
+
+How the service must be built and run, as opposed to what it does. Sources: the organisers'
+deploy contract and platform notes in `AGENTS.md` (restated here, which is authoritative when they
+differ), `specs/spring-boot-4.md`, and our own decisions. `.claude/rules/workflow.md` points here
+instead of repeating these.
+
+**Runtime**
+
+| # | Requirement |
+|---|---|
+| D1700 | Java **25** (Temurin, LTS) and Spring Boot **4.1.2**, for build and runtime. `pom.xml` `java.version` and both `Dockerfile` stages use the same major version. Changing either is a platform change under D1601. **[ours]** |
+| D1701 | Local runs and the gate use the production JDK: `verify.sh` picks it from `pom.xml` (override `JAVA_HOME_OVERRIDE`). Different JDKs format dates differently (D1250, D1650), so a green gate on another JDK proves nothing. **[ours]** |
+| D1702 | Every format a spec fixes is produced explicitly in our code, never by JVM, locale or Jackson defaults (D1650, D1903). |
+| D1703 | Reported versions are real, never hard-coded (D1602). |
+
+**Deploy contract** (`AGENTS.md`; a push to `main` deploys)
+
+| # | Requirement |
+|---|---|
+| D1710 | `Dockerfile` at the repo root, built for `linux/amd64`, takes `--build-arg GIT_SHA` and bakes it in. |
+| D1711 | Listens on port **8080**. |
+| D1712 | `GET /health` per D1950: `200` with the SHA only if the database answers within 5 s, else `503 db-unavailable`. |
+| D1713 | Database from `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`; `PGSSLMODE=require` in the image, off for local Compose. Data persists across deploys; the filesystem does not. No other external dependencies. |
+| D1714 | One instance, may scale to zero (expect cold starts). Beyond **80** concurrent requests the platform answers `503` itself. |
+
+**Database**
+
+| # | Requirement |
+|---|---|
+| D1720 | Connection pool capped at **5** (`spring.datasource.hikari.maximum-pool-size`). Hold transactions briefly; a slow transaction starves every other request. |
+| D1721 | **No advisory locks** (not guaranteed on this database). Use row locks (`SELECT … FOR UPDATE`) or conditional writes. |
+| D1722 | Session settings use `SET LOCAL` inside a transaction; a plain `SET` leaks to the next user of the pooled connection. |
+| D1723 | Schema changes go at the bottom of `schema.sql` with `IF NOT EXISTS`: it runs on every start against a database that keeps its data. **[ours]** |
+| D1724 | A rule that must hold under concurrency (D1901) locks the contended row inside `@Transactional` **and** has a database constraint as backstop. **[ours]** |
+
+**Code structure** **[ours]**
+
+| # | Requirement |
+|---|---|
+| D1730 | Controller → `ConferenceService` → DAO (`JdbcTemplate`) → `schema.sql`. Errors are `ResponseStatusException` with the D1904 status codes. |
+| D1731 | Every Talk-returning path ends in `getTalk`/`enrich(TalkDto)`, which adds the cross-feature fields (D1900). A new Talk field is added in `enrich`, not per endpoint. |
+
+**Observability and verification** **[ours]**
+
+| # | Requirement |
+|---|---|
+| D1740 | `RequestLoggingFilter` logs every request: method, path and query, status, duration, request and response body. It is how we see what the harness sends (`.github/fagdag/logs.sh`); the base app logged nothing. |
+| D1741 | Every D-rule has a JUnit test and a Hurl entry; concurrency rules have a concurrent test (`Api.concurrently`), which samples races rather than proving their absence. |
+| D1742 | Nothing ships without `workflow/scripts/verify.sh` green (`./mvnw package`, then every `examples/*.hurl` against a local service on Compose Postgres). |
+| D1743 | No secrets in the repo or in Actions; `.fagdag/harness-token` is never printed or committed. |
 
 ## D1900–D1999 Cross-cutting
 

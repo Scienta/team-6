@@ -12,10 +12,11 @@
 - Push to `main` only when the user asks: a push deploys the scored service.
 - `specs/` holds the organisers' text, untouched. Our decisions go in `workflow/specs/<slug>.md`,
   plans in `workflow/plans/<slug>.md`, examples in `examples/<slug>.hurl`.
-- Code style: Java 25 / Spring Boot 4.1 (since the spring-boot-4 upgrade), in the codebase's existing
-  style (`JdbcTemplate`, `ResponseStatusException`, Controller → `ConferenceService` → DAO).
-- Formats the specs fix (dates, `ratedAtDisplay`, trailing slashes, JSON leniency) are written
-  explicitly in our code, never left to JVM, locale or Jackson defaults; `UpgradeContractTest` and
-  `examples/spring-boot-4.hurl` pin them. See `workflow/specs/spring-boot-4.md`.
+- `workflow/DESIGN.md` is the combined check document: every feature rule (D1000+) and the
+  non-functional requirements (D1700+: Java 25 / Spring Boot 4.1, platform limits, deploy contract,
+  database, code structure, the gate). Read it before changing code; keep it current when a spec
+  or a decision changes.
+- The requirement most often broken: formats the specs fix are written explicitly in our code,
+  never left to JVM, locale or Jackson defaults (D1702).
 - `REVIEW.md` is a running log: add the claim log row when a person claims, and a section 4 entry
   when the harness catches something we missed.

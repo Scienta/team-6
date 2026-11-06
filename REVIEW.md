@@ -59,11 +59,20 @@ claimed or skipped, at which tick, and the evidence you held before claiming. Fo
 
 <!-- Failures the harness found after you claimed (or after a deploy), and why your own review missed them. -->
 
-(Caught by our own gate, not the harness:) the first run of `verify.sh` failed `ratings.hurl`
-because the local service ran on JDK 27, which puts a narrow no-break space before AM/PM in
-`ratedAtDisplay`. Production runs Temurin 11, so the deployed service was fine. The gate now runs
-the service on JDK 11 or 17. Upgrading the Docker base image past JDK 19 would break the ratings
-spec.
+**Co-speakers, adding the main speaker (harness `co-speakers/check-2`, FAULTY ticks 71–75).** We
+answered `409` when a talk's main speaker was added as its co-speaker; the check wanted the request
+to change nothing. The feature request gives no status codes, so `409` was our own guess, and every
+test we had checked that guess. Our review compared code with our decisions, not decisions with
+the business intent. The PO confirmed `200`, talk unchanged (co-speakers PO-2), and the fix shipped
+with a test.
+
+**(Caught by our own gate, not the harness:) `ratedAtDisplay` and the JDK.** The first run of
+`verify.sh` failed `ratings.hurl` because the local service ran on JDK 27, which puts a narrow
+no-break space (U+202F) before AM/PM. Production then ran Temurin 11, so the deployed service was
+fine. We made the gate run the production JDK, and the finding became the main risk in the
+spring-boot-4 upgrade: Java 25 has the same locale data. The upgrade now writes the format
+explicitly instead of relying on locale data, pinned byte-exact by `UtilsTest` and
+`UpgradeContractTest` ([DESIGN.md](workflow/DESIGN.md) D1250, D1650, D1701).
 
 ## 5. Reusable artifacts
 
