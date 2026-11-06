@@ -93,8 +93,11 @@ case "$cmd" in
     body="$(curl -sS --max-time 30 "$url/health")"
     echo "$url/health -> $body"
     git -C "$root" fetch -q origin main 2>/dev/null || true
-    want="$(git -C "$root" rev-parse origin/main)"
-    if echo "$body" | grep -q "\"$want\""; then echo "deployed = origin/main ($want)"; else echo "deployed != origin/main ($want): deploy pending or failed"; exit 3; fi ;;
+    # deploy.yml skips pushes that only change docs (paths-ignore), so the live version is the last commit on
+    # origin/main that touches anything else. Keep this list in step with paths-ignore in deploy.yml.
+    want="$(git -C "$root" log -1 --format=%H origin/main -- . ':(exclude)*.md' ':(exclude)workflow' \
+      ':(exclude).claude' ':(exclude)specs' ':(exclude)examples')"
+    if echo "$body" | grep -q "\"$want\""; then echo "deployed = last deployable commit on origin/main ($want)"; else echo "deployed != last deployable commit on origin/main ($want): deploy pending or failed"; exit 3; fi ;;
   *)
     sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

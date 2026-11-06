@@ -17,6 +17,15 @@ name: deploy
 on:
   push:
     branches: [main]
+    # Every deploy restarts the container (~30 s before it answers), and the harness's checks that hit the
+    # switchover get no response: tick 109 failed checks in every feature after a run of docs-only pushes.
+    # So a push that changes only these files doesn't deploy. A push that also touches anything else still does.
+    paths-ignore:
+      - '**.md'
+      - 'workflow/**'
+      - '.claude/**'
+      - 'specs/**'
+      - 'examples/**'
   workflow_dispatch:
 
 # One deploy at a time; a newer push waits rather than cancelling a deploy halfway.
