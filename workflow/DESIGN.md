@@ -46,7 +46,7 @@ spec, assume this document is stale until someone has reconciled it.
 | Non-functional requirements | D1700–D1799 | `AGENTS.md` (deploy contract, platform), `specs/spring-boot-4.md` | ours | — |
 | Cross-cutting | D1900–D1999 | several | — | — |
 | Unspecified endpoints | D1950–D1969 | none — in the code only | — | — |
-| Programme export | D2000–D2099 | `specs/programme-export.md` (Version 1) | not written yet — open questions in D2050–D2059 | released tick 133, unclaimed, not implemented |
+| Programme export | D2000–D2099 | `specs/programme-export.md` (Version 1) | `workflow/specs/programme-export.md` | released tick 133, being implemented, unclaimed |
 
 ## Domain model
 
@@ -352,9 +352,10 @@ harness check may exercise them, and the base features' checks pass today.
 
 ## D2000–D2099 Programme export
 
-Source: `specs/programme-export.md` (Version 1, `V: 1`). Released tick 133, **unclaimed, not
-implemented, no `workflow/specs/programme-export.md` yet**. Rules D2000–D2012 are from the feature
-request. D2050+ are open questions and risks for `/plan-feature`; **nothing in them is decided yet.**
+Source: `specs/programme-export.md` (Version 1, `V: 1`), decisions in
+`workflow/specs/programme-export.md` (PO-1..4 answered tick 140). Released tick 133, being
+implemented, unclaimed. Rules D2000–D2012 are from the feature request; D2050–D2056 are now decided
+(answers in bold).
 
 | # | Rule |
 |---|---|
@@ -376,13 +377,13 @@ request. D2050+ are open questions and risks for `/plan-feature`; **nothing in t
 
 | # | Question |
 |---|---|
-| D2050 | **Withdrawn talks on the programme.** D1807 keeps a talk on the programme when it is withdrawn later, and D2001 says "one row per scheduled talk, nothing else". So the printed programme and the room signs show a withdrawn talk. [Include it, as both specs literally say; ask the PO, because it is the opposite of what an organiser wants on a sign.] |
-| D2051 | **Two rooms at once, after the fact.** D1806 checks "nobody speaks in two rooms at once" only at PUT. A co-speaker added later (D1807 allows it) can make the export show one person in two rooms in the same slot. [Show it as it is now (D2003); the export doesn't re-check scheduling rules.] |
-| D2052 | **`text/csv` vs `text/csv;charset=UTF-8`.** `spring.servlet.encoding.force=true` (D1653) adds `;charset=UTF-8`. The spec says "served as `text/csv`" and "UTF-8". [Keep the charset parameter: it states UTF-8 and media-type matching ignores parameters; confirm against the check.] |
-| D2053 | **Status codes for a bad `Accept`.** The CSV must ignore `Accept` (D2006). Should `GET /programme` with `Accept: text/csv` be a `406` or JSON anyway? [JSON anyway: no 406s on read-only views.] |
-| D2054 | **A `"; "` inside a speaker name** makes the CSV `speakers` field ambiguous. Names are free text (D1000). [Write as is; there is no escape mechanism in the spec.] |
-| D2055 | **Formula-looking fields** (`=`, `+`, `-`, `@` first) are a CSV-injection risk in spreadsheets, but D2008 says fields are written as they are. [Write as is: escaping changes the value and breaks the check.] |
-| D2056 | `Content-Disposition` (download filename) is not specified. [None, or `inline`: don't invent one the print shop's tooling might not expect.] |
+| D2050 | **Withdrawn talks on the programme.** D1807 keeps a talk on the programme when it is withdrawn later, and D2001 says "one row per scheduled talk, nothing else". So the printed programme and the room signs show a withdrawn talk. **Decided (PO-1): include it, as the spec says.** |
+| D2051 | **Two rooms at once, after the fact.** D1806 checks "nobody speaks in two rooms at once" only at PUT. A co-speaker added later (D1807 allows it) can make the export show one person in two rooms in the same slot. **Decided: show it as it is now; no re-check.** |
+| D2052 | **`text/csv` vs `text/csv;charset=UTF-8`.** `spring.servlet.encoding.force=true` (D1653) adds `;charset=UTF-8`. The spec says "served as `text/csv`" and "UTF-8". **Decided (PO-2): keep `;charset=UTF-8`.** |
+| D2053 | **Status codes for a bad `Accept`.** The CSV must ignore `Accept` (D2006). Should `GET /programme` with `Accept: text/csv` be a `406` or JSON anyway? **Decided (PO-3): `406` when the client won't take JSON (`produces = application/json`); no `Accept`, `*/*` or JSON → JSON.** |
+| D2054 | **A `"; "` inside a speaker name** makes the CSV `speakers` field ambiguous. Names are free text (D1000). **Decided: write as is.** |
+| D2055 | **Formula-looking fields** (`=`, `+`, `-`, `@` first) are a CSV-injection risk in spreadsheets, but D2008 says fields are written as they are. **Decided: write as is.** |
+| D2056 | `Content-Disposition` (download filename) is not specified. **Decided (PO-4): `Content-Disposition: attachment; filename=programme.csv`.** |
 
 **Design notes** (constraints `/plan-feature` must respect):
 
@@ -410,7 +411,7 @@ request. D2050+ are open questions and risks for `/plan-feature`; **nothing in t
 | Health | `HealthTest`, `HealthContractTest` | — |
 | Scheduling | `SchedulingTest` (one place × 12 talks, one talk × 15 places, 9-way speaker clash, PUT racing DELETE) | `examples/scheduling.hurl` |
 | Workshop registration | `WorkshopRegistrationTest` | `examples/workshop-registration.hurl` |
-| Programme export | none yet | none yet |
+| Programme export | `ProgrammeExportTest` (byte-exact CSV, JSON = CSV rows and order, PO-1..4) | `examples/programme-export.hurl` |
 | Spring Boot 4 | `UpgradeContractTest` (P1–P4, P11, P12, P15–P20) | `examples/spring-boot-4.hurl` |
 
 Gate: `workflow/scripts/verify.sh` — `./mvnw package`, then every `examples/*.hurl` against a local
