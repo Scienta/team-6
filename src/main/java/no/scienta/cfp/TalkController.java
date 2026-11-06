@@ -50,13 +50,14 @@ public class TalkController {
         return service.removeCoSpeaker(id, speakerId);
     }
 
+    // Path variables named explicitly: Spring 6+ (Boot 3/4) can't infer names without the -parameters compiler flag.
     @PutMapping("/talks/{id}/status")
-    public TalkDto decide(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+    public TalkDto decide(@PathVariable("id") Long id, @RequestBody(required = false) Map<String, Object> body) {
         return service.decide(id, body);
     }
 
     @PostMapping("/talks/{id}/withdraw")
-    public TalkDto withdraw(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+    public TalkDto withdraw(@PathVariable("id") Long id, @RequestBody(required = false) Map<String, Object> body) {
         return service.withdraw(id, body);
     }
 

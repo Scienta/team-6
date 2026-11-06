@@ -66,7 +66,7 @@ class CoSpeakersTest {
         assertEquals(200, put(talk, b).status);
         Api.Res res = put(talk, a);
         assertEquals(200, res.status, res.toString());
-        assertEquals(b, res.json.get("coSpeakerIds").get(0).asLong(), "R4: the PUT answers with the full Talk");
+        assertEquals(b, res.number("$.coSpeakerIds[0]"), "R4: the PUT answers with the full Talk");
         assertEquals(Arrays.asList(b, a), api.coSpeakers(talk));
         assertEquals(200, delete(talk, b).status);
         assertEquals(Arrays.asList(a), api.coSpeakers(talk));
@@ -126,11 +126,11 @@ class CoSpeakersTest {
         long own = api.talk(co);
         put(talk, co);
         Api.Res list = api.get("/speakers/" + co + "/talks");
-        assertEquals(1, list.json.size());
-        assertEquals(own, list.json.get(0).get("id").asLong());
+        assertEquals(1, list.size("$"));
+        assertEquals(own, list.number("$[0].id"));
         Api.Res filtered = api.get("/talks?speakerId=" + co);
-        assertEquals(1, filtered.json.size());
-        assertEquals(own, filtered.json.get(0).get("id").asLong());
+        assertEquals(1, filtered.size("$"));
+        assertEquals(own, filtered.number("$[0].id"));
     }
 
     @Test
