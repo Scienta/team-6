@@ -23,7 +23,7 @@ else about ratings stays. Open questions are marked **PO?**.
 | all ratings equal (e.g. 5 × `4`) | trimmed to 3 × `4` → `4.0` |
 | a rating replaced (same reviewer) | recalculated from the current scores (as today) |
 | JSON form of the number | a JSON number with the value rounded to 2 decimals, written as Jackson writes a `Double` today: `4.25`, `4.5`, `4.0`. **PO?** (could be always two decimals: `4.50`, `4.00`) |
-| `/admin/stats` `averageRating` (no spec, D1950) | unchanged. It averages the talks' averages with its own rounding; the change request is about a talk's average. |
+| `/admin/stats` `averageRating` (no spec, D1951) | unchanged. It averages the talks' averages with its own rounding; the change request is about a talk's average. |
 | `/admin/talks.csv` rating column (no spec) | follows the new value (`4,25`), as it prints the talk's average |
 | switch-over | the code changes the values the current ratings checks see. **PO?** (see plan) |
 
