@@ -2,7 +2,8 @@
 
 - Our process is `workflow/PROCESS.md`. The skills in `.claude/skills/` run its steps:
   `/feature` (the whole loop), `/sync-specs`, `/plan-feature`, `/po-answers`, `/implement-feature`,
-  `/verify-feature`, `/ship`, `/feature-status`, `/triage-check`.
+  `/verify-feature`, `/ship`, `/feature-status`, `/triage-check`; `/improve` for non-feature work
+  (measure, plan, the user picks steps); `/wrap-up` for `REVIEW.md` before 17:00.
 - Talk to the harness with `workflow/scripts/harness.sh` (rate-limited; reads the token itself).
   Never print, echo or commit `.fagdag/harness-token`.
 - Agents never claim and never say a feature is done without evidence the user can check:

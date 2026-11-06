@@ -5,6 +5,8 @@ description: Check the fagdag harness for released or changed feature specs and 
 
 # Sync specs
 
+0. **Start:** `git pull --rebase` (if the tree is dirty, say so and don't pull), then
+   `git log --oneline -10` to see what teammates have pushed since we last looked.
 1. Run `workflow/scripts/harness.sh sync`. It lists the slugs on `$H/specs`, downloads each spec to
    `specs/<slug>.md`, and prints `NEW`, `CHANGED` (diff in `specs/<slug>.diff`) or `same`.
 2. Run `workflow/scripts/harness.sh feedback` for the claimed/unclaimed state of every feature.

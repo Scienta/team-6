@@ -9,15 +9,17 @@ argument-hint: "[slug]"
 The process is in `workflow/PROCESS.md`. Run the steps in order and **stop at each checkpoint**
 for the user's answer:
 
-1. `/sync-specs`. If no slug was given, pick the released, unclaimed feature (or FAULTY check) that's
+1. `/sync-specs` (it pulls first and checks teammates' work). If no slug was given, pick the released, unclaimed feature (or FAULTY check) that's
    worth the most, and say why.
 2. `/plan-feature <slug>`. **Checkpoint:** the user approves the plan and answers or parks the PO?
    questions; record answers with `/po-answers <slug>`.
 3. `/implement-feature <slug>`.
-4. `/verify-feature <slug>`. If there are gaps, go back to 3 (at most twice, then ask).
+4. `/verify-feature <slug>`, including fixing the review's findings. If there are gaps, go back to 3
+   (at most twice, then ask).
 5. **Checkpoint:** the user says ship. Then `/ship <slug>`.
-6. **Checkpoint:** a person claims on the harness. Afterwards, check with `/feature-status <slug>`
-   on the following ticks, and `/triage-check` anything FAULTY.
+6. **Checkpoint:** a person claims on the harness. Afterwards, check `/feature-status` (all
+   features, not just this one) on the following ticks, and `/triage-check` anything FAULTY.
+   Suggest `/loop 10m /feature-status` to keep watching.
 7. Make sure `REVIEW.md` has the claim log row and anything the harness caught.
 
 Keep a short status line per step, so the user can see where the loop is.

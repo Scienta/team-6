@@ -1,29 +1,55 @@
 # Our process: from feature request to claim
 
-One loop per feature (or change request). Each step has a skill in `.claude/skills/` that an agent
-runs, and a human checkpoint where noted. `/feature <slug>` runs the whole loop and stops at every
-checkpoint.
+One loop per feature (or change request), plus a shorter track for improvements that aren't
+features. Each step has a skill in `.claude/skills/` that an agent runs, and a human checkpoint
+where noted. `/feature <slug>` runs the whole feature loop and stops at every checkpoint.
 
 ```
- sync ──> spec ──> plan ──> implement ──> verify ──> ship ──> CLAIM (human) ──> watch ──> log
-  │        │  ▲      │ ▲                    │  ▲                                  │
-  │        │  └ PO?  │ └ human approves     │  └ fix (back to implement)          └ FAULTY → triage
-  └ /sync-specs      /plan-feature           /verify-feature   /ship              /triage-check
+ start ─> sync ─> spec ─> plan ─> implement ─> verify ─> ship ─> CLAIM (human) ─> watch ─> log
+   │       │       │ ▲     │ ▲         ▲         │  │      │                        │
+   │       │       │ └PO?  │ └approve  └─ fix ───┘  │      └ smoke on deployed       ├ FAULTY → triage → implement
+   │       │       └ /po-answers                    └ review findings                └ regression → rollback
+   └ git pull, teammates' work                                               (poll: /loop /feature-status)
+
+ improvement track:  analyse ─> plan ─> approve ─> implement ─> measure ─> verify ─> ship      (/improve)
+ end of day:         /wrap-up  (REVIEW.md sections 1-6 before 17:00)
 ```
+
+## Feature loop
 
 | # | Step | Skill | Output | Gate |
 |---|---|---|---|---|
+| 0 | **Start**: `git pull --rebase`; what have teammates done (git log, `workflow/specs`, `workflow/plans`)? | `/sync-specs` | up-to-date tree | no duplicate work |
 | 1 | **Sync**: what's released or changed? | `/sync-specs` | `specs/<slug>.md` (organisers' copy), `specs/<slug>.diff` when changed | - |
-| 2 | **Spec**: rules + our decisions (status codes, edge cases, concurrency) | `/plan-feature` | `workflow/specs/<slug>.md` from [templates/feature-spec.md](templates/feature-spec.md) | open **PO?** questions go to a person |
+| 2 | **Spec**: rules + our decisions (status codes, edge cases, concurrency) | `/plan-feature` | `workflow/specs/<slug>.md` from [templates/feature-spec.md](templates/feature-spec.md) | open **PO?** questions go to a person, numbered with our default |
 | 2b | **PO answers**: a person asks the product owner; the answers are recorded | `/po-answers <slug> <answers>` | "Product owner answers" table in `workflow/specs/<slug>.md`, decision tables updated, plan's test table gains a `PO-n` row | every answer has a test tagged `// PO-n` |
 | 3 | **Plan**: files to touch, tests to write, in order | `/plan-feature` | `workflow/plans/<slug>.md` from [templates/plan.md](templates/plan.md) | **human approves the plan** |
-| 4 | **Implement**: tests first (JUnit + Hurl), then code | `/implement-feature` | code, `src/test/.../<Feature>Test.java`, `examples/<slug>.hurl` | tests red before, green after |
-| 5 | **Verify**: the full gate | `/verify-feature` | `workflow/scripts/verify.sh` output; spec-vs-code review | every rule has a test; script passes |
-| 6 | **Ship**: commit, push, deploy | `/ship` | commit on `main`, deploy run green, `/health` = new SHA | **human says push** |
+| 4 | **Implement**: tests first (JUnit + Hurl), then code | `/implement-feature` | code, `src/test/.../<Feature>Test.java`, `examples/<slug>.hurl` | tests red before, green after; `verify.sh --quick` |
+| 5 | **Verify**: the full gate + an independent review | `/verify-feature` | `workflow/scripts/verify.sh` output; rule → code → test table from a review agent | every rule has a test; script passes |
+| 5b | **Fix review findings**: each finding is fixed (with a test) or recorded as a decision in our spec | `/verify-feature` → `/implement-feature` | stronger tests, spec rows for accepted behaviour | full gate passes again |
+| 6 | **Ship**: group the commits, push, deploy, smoke-test the deployed service | `/ship` | one commit per feature/topic on `main`, deploy run green, `/health` = new SHA, the feature's Hurl file green against `TEAM_URL` (if the user agrees) | **human says push** |
 | 7 | **Claim** | (a person, on the harness) | claim button | evidence from steps 5-6 shown to the person |
-| 8 | **Watch**: harness checks for the feature | `/feature-status` | `harness.sh feedback <slug>` | all checks OK |
-| 9 | **Triage** a FAULTY check | `/triage-check` | failing request from transcript + logs, a reproducing test, fix | back to step 4 |
+| 8 | **Watch**: the new feature's checks **and every other feature's**: a change (e.g. a PO answer) can affect claimed features | `/feature-status`, polled with `/loop 10m /feature-status` | `harness.sh feedback` | all checks OK; no score bleeding |
+| 9a | **Triage** a FAULTY check | `/triage-check` | failing request from transcript + logs, a reproducing test, fix | back to step 4 |
+| 9b | **Roll back** when a deploy breaks claimed features and the fix isn't quick | `/ship` (rollback) | `git revert <sha>` + push, after the user agrees | checks OK again |
 | 10 | **Log**: REVIEW.md claim log / "harness caught" | (every skill appends) | `REVIEW.md` | - |
+
+## Improvement track
+
+For work that isn't a feature request (build speed, logging, tooling, refactoring): `/improve <topic>`.
+
+| Step | Output | Gate |
+|---|---|---|
+| Analyse: measure first (timings, logs, failure counts) | numbers in `workflow/plans/<topic>.md` | - |
+| Plan: numbered steps, biggest win first, risks | `workflow/plans/<topic>.md` | **human picks the steps** |
+| Implement + measure again | before/after table in the plan | the same tests still pass |
+| Verify, ship | as steps 5-6 above | **human says push** |
+
+## End of day
+
+`/wrap-up` before 17:00: every `REVIEW.md` heading has text. That means the claim log, what the
+harness caught, reusable artifacts and one thing we'd do differently, plus links to `workflow/` and
+`.claude/` in section 1.
 
 ## Tools
 
@@ -47,3 +73,7 @@ checkpoint.
   answer, and its tests are re-run.
 - A change request (a spec whose `Version:` goes up) goes through the same loop. The plan starts
   from `specs/<slug>.diff`.
+- Plans carry a status (`draft` → `approved` → `done`) and a "Done when" checklist that is ticked
+  as the steps pass.
+- Local runs must match production: the service runs on JDK 11 (or 17) in `verify.sh`, because
+  JDK 20+ formats dates differently.

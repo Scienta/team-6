@@ -17,5 +17,8 @@ argument-hint: <slug>
 3. Check the effects on other features: existing responses still have every field the base specs
    list, and `ConferenceServiceTest`, `TalksTest` and the base hurl files still pass (step 1
    covers that).
-4. Report: gate result, rule→test table, gaps. If there are gaps, propose the fix and go back to
-   `/implement-feature`. If clean, say it's ready for `/ship`.
+4. **Fix review findings** (step 5b): fix each finding with a test, or, if the behaviour is
+   acceptable, record it as a row in `workflow/specs/<slug>.md` (e.g. "415 for a non-JSON body").
+   Fix doc drift between the spec, plan and tests. Re-run the full gate.
+5. Report: gate result, rule→test table, what the review found and what was done about each
+   finding. If clean, say it's ready for `/ship`.

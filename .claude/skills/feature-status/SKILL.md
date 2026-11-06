@@ -9,5 +9,8 @@ argument-hint: "[slug]"
 1. `workflow/scripts/harness.sh feedback [slug]`: tick, score, down state, and per feature whether
    it's claimed plus its check statuses. Non-OK checks are printed in full.
 2. `workflow/scripts/harness.sh health`: is the deployed version origin/main?
-3. Summarise in a few lines: what's down or FAULTY (suggest `/triage-check <feature/check>`),
+3. Run `workflow/scripts/harness.sh list` too, and say if a slug has appeared that isn't in
+   `specs/` (suggest `/sync-specs`). To poll during the day: `/loop 10m /feature-status`.
+4. Summarise in a few lines, comparing with the last status if you have it (a check that was OK
+   and is now FAULTY after a deploy is a regression): what's down or FAULTY (suggest `/triage-check <feature/check>`),
    which released features are unclaimed (suggest `/plan-feature`), and if score is bleeding.
