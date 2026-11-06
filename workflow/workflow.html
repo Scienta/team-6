@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team 6 — How we work</title>
+<style>
+  :root {
+    --bg: #0f1420; --card: #182033; --line: #2c3854; --text: #e6ebf5; --muted: #8e9ab3;
+    --agent: #4f8cff; --human: #ffb547; --gate: #3ccf91; --bad: #ff6b6b; --doc: #b48cff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); }
+  main { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 34px; margin: 0 0 6px; }
+  h2 { font-size: 20px; margin: 56px 0 18px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+
+  /* the loop */
+  .loop { display: grid; grid-template-columns: repeat(5, 1fr); gap: 34px 26px; position: relative; }
+  .step { background: var(--card); border: 2px solid var(--c, var(--agent)); border-radius: 14px; padding: 14px 14px 12px; position: relative; }
+  .step .n { position: absolute; top: -12px; left: 12px; background: var(--c, var(--agent)); color: #0f1420; font-weight: 700; font-size: 12px; padding: 1px 8px; border-radius: 10px; }
+  .step .ico { font-size: 28px; }
+  .step b { display: block; font-size: 16px; margin: 2px 0 2px; }
+  .step code { font-size: 12px; color: var(--c, var(--agent)); }
+  .step small { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .step.human { --c: var(--human); }
+  .step.gate { --c: var(--gate); }
+  .step:not(:nth-child(5n))::after { content: "➜"; position: absolute; right: -22px; top: 40%; color: var(--muted); font-size: 18px; }
+  .step:nth-child(5)::before { content: "⤵"; position: absolute; bottom: -32px; left: 45%; color: var(--muted); font-size: 22px; }
+  .row2 { direction: rtl; }
+  .row2 .step { direction: ltr; }
+  .row2 .step:not(:nth-child(5n))::after { content: "⬅"; right: auto; left: -22px; }
+  .row2 .step:nth-child(5)::before { display: none; }
+
+  .feedback { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; }
+  .fb { border: 1px dashed var(--c); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: var(--muted); }
+  .fb strong { color: var(--c); display: block; font-size: 14px; }
+
+  /* checkpoints */
+  .checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .chk { background: var(--card); border-radius: 14px; padding: 18px; text-align: center; border-top: 4px solid var(--human); }
+  .chk .ico { font-size: 34px; }
+  .chk b { display: block; margin: 6px 0 2px; }
+  .chk small { color: var(--muted); }
+
+  /* docs map */
+  .docs { display: grid; grid-template-columns: 1fr 80px 1fr 80px 1fr; align-items: center; }
+  .doc { background: var(--card); border-radius: 12px; padding: 14px; border-left: 4px solid var(--c); }
+  .doc b { display: block; } .doc code { color: var(--c); font-size: 12px; } .doc small { color: var(--muted); display: block; margin-top: 4px; }
+  .doc + .doc { margin-top: 10px; }
+  .arrow { text-align: center; color: var(--muted); font-size: 26px; }
+
+  /* traceability */
+  .trace { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .pill { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-weight: 600; }
+  .pill em { font-style: normal; color: var(--muted); font-weight: 400; font-size: 12px; display: block; text-align: center; }
+  .trace .to { color: var(--muted); }
+
+  /* tracks */
+  .tracks { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .track { background: var(--card); border-radius: 14px; padding: 18px; }
+  .track b { font-size: 16px; } .track code { color: var(--agent); }
+  .mini { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .mini span { background: #222c44; border-radius: 6px; padding: 4px 9px; font-size: 13px; }
+  .mini span.h { background: var(--human); color: #0f1420; font-weight: 600; }
+
+  .rules { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .rule { background: var(--card); border-radius: 12px; padding: 14px; text-align: center; }
+  .rule .ico { font-size: 26px; } .rule b { display: block; margin-top: 4px; font-size: 14px; } .rule small { color: var(--muted); font-size: 12px; }
+
+  @media (max-width: 900px) {
+    .loop { grid-template-columns: 1fr 1fr; } .row2 { direction: ltr; }
+    .step::after, .step::before { display: none; }
+    .feedback, .checks, .tracks, .rules { grid-template-columns: 1fr; }
+    .docs { grid-template-columns: 1fr; } .arrow { transform: rotate(90deg); }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>🔁 How team 6 ships a feature</h1>
+  <p class="sub">Agents do the work. People make the calls. Every claim comes with evidence you can check.</p>
+  <div class="legend">
+    <span style="--c: var(--agent)">agent step (skill)</span>
+    <span style="--c: var(--human)">human checkpoint</span>
+    <span style="--c: var(--gate)">quality gate</span>
+    <span style="--c: var(--doc)">document</span>
+  </div>
+
+  <h2>The feature loop · <code style="text-transform:none">/feature &lt;slug&gt;</code></h2>
+  <div class="loop">
+    <div class="step"><span class="n">0–1</span><div class="ico">📥</div><b>Sync</b><code>/sync-specs</code><small>pull teammates' work, fetch released specs</small></div>
+    <div class="step"><span class="n">2</span><div class="ico">📝</div><b>Spec</b><code>/plan-feature</code><small>rules R1..Rn + our decisions</small></div>
+    <div class="step human"><span class="n">2b</span><div class="ico">🙋</div><b>PO answers</b><code>/po-answers</code><small>open questions → product owner</small></div>
+    <div class="step"><span class="n">2c</span><div class="ico">🧭</div><b>Design</b><code>DESIGN.md</code><small>fold rules in as D-rules</small></div>
+    <div class="step human"><span class="n">3</span><div class="ico">🗺️</div><b>Plan</b><code>/plan-feature</code><small>human approves</small></div>
+  </div>
+  <div class="loop row2" style="margin-top:34px">
+    <div class="step"><span class="n">4</span><div class="ico">🧪</div><b>Implement</b><code>/implement-feature</code><small>tests first, red → green</small></div>
+    <div class="step gate"><span class="n">5</span><div class="ico">✅</div><b>Verify</b><code>/verify-feature</code><small>full gate + independent review</small></div>
+    <div class="step human"><span class="n">6</span><div class="ico">🚀</div><b>Ship</b><code>/ship</code><small>human says push → deploy</small></div>
+    <div class="step human"><span class="n">7</span><div class="ico">🏁</div><b>Claim</b><code>harness button</code><small>a person, never an agent</small></div>
+    <div class="step"><span class="n">8</span><div class="ico">👀</div><b>Watch</b><code>/feature-status</code><small>all features' checks</small></div>
+  </div>
+
+  <div class="feedback">
+    <div class="fb" style="--c: var(--bad)"><strong>🔴 Check FAULTY</strong><code>/triage-check</code> → reproduce in a test → back to Implement</div>
+    <div class="fb" style="--c: var(--human)"><strong>⏪ Deploy broke things</strong>rollback with <code>git revert</code> (after a person agrees)</div>
+    <div class="fb" style="--c: var(--gate)"><strong>🔍 Review finding</strong>fix it with a test, or record it as a decision</div>
+  </div>
+
+  <h2>Where people decide</h2>
+  <div class="checks">
+    <div class="chk"><div class="ico">🙋</div><b>Answer the PO?</b><small>business rules come from the product owner</small></div>
+    <div class="chk"><div class="ico">👍</div><b>Approve the plan</b><small>before any code is written</small></div>
+    <div class="chk"><div class="ico">🚀</div><b>Push &amp; claim</b><small>push deploys the scored service; claims are permanent</small></div>
+  </div>
+
+  <h2>What feeds what</h2>
+  <div class="docs">
+    <div>
+      <div class="doc" style="--c: var(--muted)"><b>Organisers' spec</b><code>specs/&lt;slug&gt;.md</code><small>never edited</small></div>
+      <div class="doc" style="--c: var(--human)"><b>PO answers</b><code>PO-1..n</code></div>
+    </div>
+    <div class="arrow">➜</div>
+    <div>
+      <div class="doc" style="--c: var(--doc)"><b>Our spec</b><code>workflow/specs/&lt;slug&gt;.md</code><small>status codes, edge cases</small></div>
+      <div class="doc" style="--c: var(--doc)"><b>DESIGN.md</b><code>D1000+ rules</code><small>whole service, one place</small></div>
+      <div class="doc" style="--c: var(--doc)"><b>Plan</b><code>workflow/plans/&lt;slug&gt;.md</code><small>draft → approved → done</small></div>
+    </div>
+    <div class="arrow">➜</div>
+    <div>
+      <div class="doc" style="--c: var(--agent)"><b>Code + JUnit</b><code>src/…/&lt;Feature&gt;Test.java</code></div>
+      <div class="doc" style="--c: var(--agent)"><b>Hurl examples</b><code>examples/&lt;slug&gt;.hurl</code></div>
+      <div class="doc" style="--c: var(--gate)"><b>REVIEW.md</b><code>claim log</code><small>+ what the harness caught</small></div>
+    </div>
+  </div>
+
+  <h2>Every rule is traceable</h2>
+  <div class="trace">
+    <div class="pill">R3<em>feature rule</em></div><span class="to">→</span>
+    <div class="pill">D1203<em>DESIGN.md</em></div><span class="to">→</span>
+    <div class="pill">plan step<em>workflow/plans</em></div><span class="to">→</span>
+    <div class="pill">test_R3_…<em>JUnit</em></div><span class="to">→</span>
+    <div class="pill"># R3<em>Hurl</em></div><span class="to">→</span>
+    <div class="pill" style="border-color:var(--gate)">✅ verify.sh<em>evidence</em></div>
+  </div>
+
+  <h2>Two tracks + end of day</h2>
+  <div class="tracks">
+    <div class="track"><b>🧩 Feature / change request</b> &nbsp;<code>/feature</code>
+      <div class="mini"><span>sync</span><span>spec</span><span>design</span><span class="h">approve</span><span>implement</span><span>verify</span><span class="h">push</span><span class="h">claim</span><span>watch</span></div>
+    </div>
+    <div class="track"><b>🔧 Improvement</b> &nbsp;<code>/improve</code>
+      <div class="mini"><span>measure</span><span>plan</span><span class="h">pick steps</span><span>implement</span><span>measure again</span><span>verify</span><span class="h">push</span></div>
+    </div>
+  </div>
+  <div class="track" style="margin-top:16px"><b>🕔 Before 17:00</b> &nbsp;<code>/wrap-up</code> — every <code>REVIEW.md</code> heading filled</div>
+
+  <h2>House rules</h2>
+  <div class="rules">
+    <div class="rule"><div class="ico">🔐</div><b>Token stays secret</b><small>only via harness.sh</small></div>
+    <div class="rule"><div class="ico">🧾</div><b>No "done" without proof</b><small>verify.sh + test table + deployed SHA</small></div>
+    <div class="rule"><div class="ico">📐</div><b>Formats explicit</b><small>never JVM / Jackson defaults (D1702)</small></div>
+    <div class="rule"><div class="ico">🛑</div><b>Push only on request</b><small>main = production</small></div>
+  </div>
+</main>
+</body>
+</html>
