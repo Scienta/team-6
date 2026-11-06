@@ -38,7 +38,7 @@ spec, assume this document is stale until someone has reconciled it.
 |---|---|---|---|---|
 | Speakers | D1000–D1099 | `specs/speakers.md` (Version 1) | — | base, claimed |
 | Talks | D1100–D1199 | `specs/talks.md` (Version 1) | — | base, claimed |
-| Ratings | D1200–D1299 | `specs/ratings.md` (Version 1) + change request `specs/ratings-cr.md` (Version 1, released tick 167) | `workflow/specs/ratings-cr.md` | base, claimed; change request unclaimed and not implemented (plan written), D1204/D1206 changed in place |
+| Ratings | D1200–D1299 | `specs/ratings.md` (Version 1) + change request `specs/ratings-cr.md` (Version 1, released tick 167) | `workflow/specs/ratings-cr.md` | base, claimed; change request implemented (not yet shipped), unclaimed; D1204/D1206 changed in place |
 | Co-speakers | D1300–D1399 | `specs/co-speakers.md` (Version 1) | `workflow/specs/co-speakers.md` | released tick 0, claimed tick 70 |
 | Acceptance | D1400–D1499 | `specs/acceptance.md` (Version 1) | `workflow/specs/acceptance.md` | released tick 20, claimed tick 107 |
 | Workshop registration | D1500–D1599 | `specs/workshop-registration.md` (Version 1) | `workflow/specs/workshop-registration.md` | released tick 67, claimed tick 123 |
@@ -137,7 +137,7 @@ Source: `specs/ratings.md` (Version 1), **changed by `specs/ratings-cr.md`** (ch
 | D1205 | `GET /talks` lists all talks oldest first; `?speakerId=` filters to one speaker. |
 | D1206 | `?sort=rating` ranks by the rounded average (D1204, so the trimmed 2-decimal one since ratings-cr R4) desc, then by `ratingCount` desc, then oldest first. Unrated talks last. |
 | D1207 | Concurrent ratings on one talk: no rating lost, nobody counted twice, double-clicks safe (see D1901). |
-| D1208 | **[ratings-cr R3, ours]** `ratingCount` counts every reviewer, also the two left out of the average. Calculation: `(sum − max − min) / (count − 2)` at ≥5 ratings, else `sum / count`; exact `BigDecimal` from the integer sums, scale 2, `HALF_EVEN`, so ties are decided on the exact value (`25/8 = 3.125` → `3.12`), never on a `double`. Exactly 5 ratings are trimmed; all-equal scores trim to the same value (5 × `4` → `4.0`). `/admin/stats` keeps its own average (D1951); `/admin/talks.csv` prints the new value (D1952). |
+| D1208 | **[ratings-cr R3, ours]** `ratingCount` counts every reviewer, also the two left out of the average. Calculation: `(sum − max − min) / (count − 2)` at ≥5 ratings, else `sum / count`; exact `BigDecimal` from the integer sums, scale 2, `HALF_EVEN`, so ties are decided on the exact value (`25/8 = 3.125` → `3.12`), never on a `double`. Exactly 5 ratings are trimmed; all-equal scores trim to the same value (5 × `4` → `4.00`). `/admin/stats` keeps its own average (D1951); `/admin/talks.csv` prints the new value (D1952). |
 | D1209 | **[PO-2, tick 171]** JSON form: **always two decimals**, `4.00`, `4.50`, `4.25` (`averageRating` is a `BigDecimal` with scale 2). `/admin/talks.csv` prints `4,00`. |
 | D1210 | **[PO-1, tick 171]** Switch-over: **the claim switches** the harness's ratings checks to the new rule. Until then they check the old one. So: push, wait until `/health` shows the new SHA, then a person claims ratings-cr straight away. Expect at most a tick of FAULTY ratings checks in between. |
 | D1250 | `ratedAtDisplay`: time of the latest rating, UTC, US short format `M/d/yy, h:mm AM` — no leading zeros on month/day/hour, 2-digit year, 12-hour clock, **exactly one ordinary space** before AM/PM. E.g. `11/4/26, 1:05 PM`, `11/4/26, 12:00 AM`. The clash with Spring Boot 4's JDK locale data (D1601) is resolved by D1650: the format is written explicitly. |
@@ -348,7 +348,7 @@ harness check may exercise them, and the base features' checks pass today.
 | # | Endpoint | Note |
 |---|---|---|
 | D1950 | `GET /health` | **Deploy contract**, not a spec: `200 {"status":"ok","version":"<GIT_SHA>"}`, or `503 {"status":"db-unavailable",...}` when the database doesn't answer within 5 s. |
-| D1951 | `GET /admin/stats` | Statistics incl. `byStatus` — picks up new acceptance statuses automatically. Its `averageRating` averages the talks' averages with its own rounding and is **not** changed by ratings-cr (D1208). |
+| D1951 | `GET /admin/stats` | Statistics incl. `byStatus` — picks up new acceptance statuses automatically. Its `averageRating` averages the talks' averages with its own rounding (cut off to one decimal). Its formula is not changed by ratings-cr, but its **inputs** are: the talks' trimmed two-decimal averages, so its value can move (two talks at `4,4,4,5`: was `4.3`, now `4.2`). No spec, so no check. |
 | D1952 | `GET /admin/talks.csv` | CSV report for the committee's spreadsheet: `;`-separated, comma decimals, Norwegian dates, `text/csv; charset=UTF-8`. Its rating column prints the talk's average, so it follows ratings-cr (`4,25`, D1208). Its helper `Utils.csv` is **not RFC 4180** (quotes only on `;` or `"`, and *replaces* `"` with `'`): never reuse it for the programme CSV (D2008). |
 | D1953 | `GET /speakers/search?q=` | Speaker search. |
 | D1954 | `PUT /speakers/{id}` | Speaker update — `specs/speakers.md` describes no update endpoint. **Inconsistent with the speaker rules:** it accepts a 1000-character bio (D1002 says 500) and a whitespace-only name (only `""` is rejected; D1001 wants a real name), and uses the weaker `Utils.isValidEmail`. Since D2003 shows names "as they are right now", this endpoint is the one way a bad name reaches the programme. |
@@ -408,7 +408,7 @@ implemented, unclaimed. Rules D2000–D2012 are from the feature request; D2050�
 | Speakers | `SpeakersTest`, `SpeakerFormTest` | `examples/speakers*.hurl` |
 | Talks | `TalksTest` (incl. concurrent 3-talk limit) | `examples/talks.hurl` |
 | Ratings | `RatingsTest` (incl. many reviewers at once, double-click), `ConferenceServiceTest` | `examples/ratings.hurl` |
-| Ratings change request | planned: `RatingsCrTest`, and the old-rounding pins in `RatingsTest`, `FormatsTest`, `UpgradeContractTest` updated (`workflow/plans/ratings-cr.md`) | planned: `examples/ratings-cr.hurl`; `ratings.hurl`, `spring-boot-4.hurl` updated |
+| Ratings change request | `RatingsCrTest` (spec's ties 25/8 → 3.12, 27/8 → 3.38, trim at 5, raw `4.00`); old-rounding pins updated in `RatingsTest`, `FormatsTest`, `UpgradeContractTest`, `AdminReportsTest` | `examples/ratings-cr.hurl`; `spring-boot-4.hurl` updated |
 | Formats | `FormatsTest`, `UtilsTest` (byte-exact `ratedAtDisplay`) | — |
 | Admin reports | `AdminReportsTest` | — |
 | Co-speakers | `CoSpeakersTest` (10 concurrent PUTs → exactly 2) | `examples/co-speakers.hurl` |

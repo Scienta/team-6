@@ -180,7 +180,9 @@ class UpgradeContractTest {
 
         // Speaker B: both show 4.33, so the rounded average ties and the count decides; unrated last. ratings-cr: b1 is
         // 4,4,5 = 13/3; b2 has 8 ratings, the 3 and one 5 are left out, 4,4,4,4,5,5 = 26/6, the same 4.333.
-        // (Before ratings-cr this used 4.33 vs 4.25, which tied at one decimal.)
+        // (Before ratings-cr this used 4.33 vs 4.25, which tied only after rounding to one decimal. Two values that differ
+        // but round to the same two decimals need ~45 ratings, so this now checks an exact tie; the sort uses the stored
+        // rounded value either way.)
         long b = api.speaker();
         long b1 = api.talk(b), b2 = api.talk(b), b3 = api.talk(b);
         api.rate(b1, 1, 4);

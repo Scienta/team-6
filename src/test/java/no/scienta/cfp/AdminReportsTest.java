@@ -70,7 +70,7 @@ class AdminReportsTest {
         assertTrue(r.text("generated").matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"), r.text("generated"));
     }
 
-    /** The mean of the talks' (rounded) averages, cut off: (4.3 + 4.0) / 2 = 4.15 -> 4.1. PO? see UtilsTest. */
+    /** The mean of the talks' (rounded) averages, cut off: (4.25 + 4.00) / 2 = 4.125 -> 4.1 (since ratings-cr; was (4.3 + 4.0) / 2 = 4.15 -> 4.1). PO? see UtilsTest. */
     @Test
     void statsAverageIsTheMeanOfTalkAveragesCutOff() {
         assertEquals("4.1", api.get("/admin/stats").json.get("averageRating").asText());

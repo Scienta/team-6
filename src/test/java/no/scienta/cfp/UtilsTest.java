@@ -31,7 +31,8 @@ class UtilsTest {
     }
 
     // Only /admin/stats uses this: its average is cut off (4.25 -> 4.2, CFP-61). Talk averages are NOT rounded this
-    // way: specs/ratings.md rounds halves up (4.25 -> 4.3), see FormatsTest.averageRatingRoundsHalvesUp.
+    // way: a talk's average is rounded half to even to two decimals since ratings-cr (4.25 stays 4.25), see
+    // FormatsTest.averageRatingHasTwoDecimals and RatingsCrTest.
     // PO?: should the admin stats round like the spec too? Until answered, this pins today's behaviour.
     @Test
     void adminStatsRatingIsCutOffToOneDecimal() {

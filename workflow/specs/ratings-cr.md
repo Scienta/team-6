@@ -23,7 +23,7 @@ else about ratings stays. Open questions are marked **PO?**.
 | all ratings equal (e.g. 5 × `4`) | trimmed to 3 × `4` → `4.00` |
 | a rating replaced (same reviewer) | recalculated from the current scores (as today) |
 | JSON form of the number (PO-2) | always two decimals: `4.00`, `4.50`, `4.25` (a `BigDecimal` with scale 2). The CSV report prints `4,00`. |
-| `/admin/stats` `averageRating` (no spec, D1951) | unchanged. It averages the talks' averages with its own rounding; the change request is about a talk's average. |
+| `/admin/stats` `averageRating` (no spec, D1951) | formula unchanged (mean of the talks' averages, cut off to one decimal), but it now averages the new trimmed two-decimal values, so the result can move (review finding, accepted) |
 | `/admin/talks.csv` rating column (no spec) | follows the new value (`4,25`), as it prints the talk's average |
 | switch-over (PO-1) | the claim switches the checks: push, wait for `/health`, then claim at once |
 
