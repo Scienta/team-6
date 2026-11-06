@@ -16,6 +16,17 @@
 
 <!-- The steps you actually ran, from spec to claim. Link to the files in workflow/ and .claude/. -->
 
+One loop per feature, described in [workflow/PROCESS.md](workflow/PROCESS.md): sync → spec → plan
+→ implement → verify → ship → claim (a person) → watch → triage. Each step is a skill in
+[.claude/skills/](.claude/skills/), and `/feature <slug>` runs the whole loop, stopping at the human
+checkpoints (plan approval, push, claim). The fixed operations are scripts:
+[workflow/scripts/harness.sh](workflow/scripts/harness.sh) (list/sync specs, feedback, timeline,
+deployed health; rate-limited, never prints the token) and
+[workflow/scripts/verify.sh](workflow/scripts/verify.sh) (the gate: `./mvnw package`, then every
+Hurl example against a local service). Templates for our spec decisions and plans are in
+[workflow/templates/](workflow/templates/). Agent guardrails are in
+[.claude/rules/workflow.md](.claude/rules/workflow.md).
+
 ## 2. How we reviewed agent output
 
 <!-- Who or what reviewed the agents' work (people, review agents, tests, Hurl examples, gates in
@@ -34,6 +45,12 @@ claimed or skipped, at which tick, and the evidence you held before claiming. Fo
 ## 4. What the harness caught that we didn't
 
 <!-- Failures the harness found after you claimed (or after a deploy), and why your own review missed them. -->
+
+(Caught by our own gate, not the harness:) the first run of `verify.sh` failed `ratings.hurl`
+because the local service ran on JDK 27, which puts a narrow no-break space before AM/PM in
+`ratedAtDisplay`. Production runs Temurin 11, so the deployed service was fine. The gate now runs
+the service on JDK 11 or 17. Upgrading the Docker base image past JDK 19 would break the ratings
+spec.
 
 ## 5. Reusable artifacts
 
