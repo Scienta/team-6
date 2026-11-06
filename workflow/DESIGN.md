@@ -39,13 +39,14 @@ spec, assume this document is stale until someone has reconciled it.
 | Talks | D1100–D1199 | `specs/talks.md` (Version 1) | — | base, claimed |
 | Ratings | D1200–D1299 | `specs/ratings.md` (Version 1) | — | base, claimed |
 | Co-speakers | D1300–D1399 | `specs/co-speakers.md` (Version 1) | `workflow/specs/co-speakers.md` | released tick 0, claimed tick 70 |
-| Acceptance | D1400–D1499 | `specs/acceptance.md` (Version 1) | `workflow/specs/acceptance.md` | released tick 20, unclaimed |
-| Workshop registration | D1500–D1599 | `specs/workshop-registration.md` (Version 1) | `workflow/specs/workshop-registration.md` | released tick 67, implemented (not yet shipped), unclaimed |
+| Acceptance | D1400–D1499 | `specs/acceptance.md` (Version 1) | `workflow/specs/acceptance.md` | released tick 20, claimed tick 107 |
+| Workshop registration | D1500–D1599 | `specs/workshop-registration.md` (Version 1) | `workflow/specs/workshop-registration.md` | released tick 67, claimed tick 123 |
 | Platform / Spring Boot 4 | D1600–D1699 | `specs/spring-boot-4.md` (Version 1) | `workflow/specs/spring-boot-4.md` | released tick 40, claimed tick 98 |
-| Scheduling | D1800–D1899 | `specs/scheduling.md` (Version 1) | `workflow/specs/scheduling.md` | released tick 100, unclaimed |
+| Scheduling | D1800–D1899 | `specs/scheduling.md` (Version 1) | `workflow/specs/scheduling.md` | released tick 100, claimed tick 136 |
 | Non-functional requirements | D1700–D1799 | `AGENTS.md` (deploy contract, platform), `specs/spring-boot-4.md` | ours | — |
 | Cross-cutting | D1900–D1999 | several | — | — |
 | Unspecified endpoints | D1950–D1969 | none — in the code only | — | — |
+| Programme export | D2000–D2099 | `specs/programme-export.md` (Version 1) | not written yet — open questions in D2050–D2059 | released tick 133, unclaimed, not implemented |
 
 ## Domain model
 
@@ -59,9 +60,13 @@ Speaker ──1──< Talk >──*── Rating        (reviewer is just a num
                  ├──< Registration       (only when format=WORKSHOP and status=ACCEPTED, max 20)
                  │
                  └──0..1 Programme entry (room R1-R3 × slot S1-S5, 15 fixed places; only ACCEPTED)
+                              │
+                              └── read by Programme export (GET /programme, /programme.csv):
+                                  entry + talk + speaker names, joined as they are now
 ```
 
-Dependency order, strict: **speakers → talks → ratings → acceptance → workshop-registration**.
+Dependency order, strict: **speakers → talks → ratings → acceptance → workshop-registration**, and
+**acceptance → scheduling → programme-export** (export also reads co-speakers and speaker names).
 Workshop registration needs `format=WORKSHOP` from talks *and* `status=ACCEPTED` from acceptance,
 and accepting needs two distinct reviewers from ratings. Co-speakers hangs off talks only.
 Spring Boot 4 is orthogonal — it must change nothing above.
@@ -327,7 +332,7 @@ Released tick 100. Open PO questions PO-?1..6 carry our defaults.
 | D1900 | **Every response returning a Talk returns the complete Talk view** — all fields in the table above, from every feature. "Wherever a talk is shown" appears in ratings, co-speakers and acceptance; it means all eight endpoints listed there. |
 | D1901 | **Five specs independently demand correctness under concurrent writes:** D1105 (submission rush), D1207 (reviewers double-clicking), D1408 (committee racing), D1502 (registration rush), D1808 (committee scheduling at once). With a 5-connection pool and **no advisory locks**, the pattern is `SELECT … FOR UPDATE` on the contended row inside `@Transactional`, plus a database constraint as backstop. A constraint is the only unconditional proof; locks are only as good as the code around them. |
 | D1902 | **Case-insensitive email, specified twice:** D1003 (speakers) and D1503 (attendees). Same comparison rule, separate tables, and both must return the original casing (D1004, D1504). |
-| D1903 | **Exact string formats are contractual** — D1150, D1151, D1250. Legacy clients parse them as plain strings. Never let a locale or JDK default decide them. |
+| D1903 | **Exact string formats are contractual** — D1150, D1151, D1250, D1801, and the programme CSV (D2006–D2010). Legacy clients parse them as plain strings. Never let a locale or JDK default decide them. |
 | D1904 | Error-code conventions, as settled in acceptance and co-speakers **[ours]**: `400` malformed input, `403` wrong actor, `404` unknown entity, `409` rule violation / illegal state, `415` wrong Content-Type. Validate body → entity exists → authorisation → state. |
 | D1905 | A feature request gives business rules and API surface only. Status codes, edge cases and error handling are ours to decide and write down (AGENTS.md). |
 
@@ -340,10 +345,56 @@ harness check may exercise them, and the base features' checks pass today.
 |---|---|---|
 | D1950 | `GET /health` | **Deploy contract**, not a spec: `200 {"status":"ok","version":"<GIT_SHA>"}`, or `503 {"status":"db-unavailable",...}` when the database doesn't answer within 5 s. |
 | D1951 | `GET /admin/stats` | Statistics incl. `byStatus` — picks up new acceptance statuses automatically. |
-| D1952 | `GET /admin/talks.csv` | CSV report. |
+| D1952 | `GET /admin/talks.csv` | CSV report for the committee's spreadsheet: `;`-separated, comma decimals, Norwegian dates, `text/csv; charset=UTF-8`. Its helper `Utils.csv` is **not RFC 4180** (quotes only on `;` or `"`, and *replaces* `"` with `'`): never reuse it for the programme CSV (D2008). |
 | D1953 | `GET /speakers/search?q=` | Speaker search. |
-| D1954 | `PUT /speakers/{id}` | Speaker update — note `specs/speakers.md` describes no update endpoint. |
+| D1954 | `PUT /speakers/{id}` | Speaker update — `specs/speakers.md` describes no update endpoint. **Inconsistent with the speaker rules:** it accepts a 1000-character bio (D1002 says 500) and a whitespace-only name (only `""` is rejected; D1001 wants a real name), and uses the weaker `Utils.isValidEmail`. Since D2003 shows names "as they are right now", this endpoint is the one way a bad name reaches the programme. |
 | D1955 | `GET /actuator/info` | Version reporting; becomes contractual under D1602. |
+
+## D2000–D2099 Programme export
+
+Source: `specs/programme-export.md` (Version 1, `V: 1`). Released tick 133, **unclaimed, not
+implemented, no `workflow/specs/programme-export.md` yet**. Rules D2000–D2012 are from the feature
+request. D2050+ are open questions and risks for `/plan-feature`; **nothing in them is decided yet.**
+
+| # | Rule |
+|---|---|
+| D2000 | Two **read-only** views of the programme (D1800–D1855): `GET /programme` (JSON array of `ProgrammeRow`) and `GET /programme.csv` (CSV). Both `200`. |
+| D2001 | **One row per scheduled talk, nothing else**: one row per filled place (D1802), no rows for the empty ones. Both views have the same rows **in the same order**. |
+| D2002 | Order: earliest start first, then by room `R1`, `R2`, `R3` within a slot. Slot order S1→S5 *is* start order (`Programme.SLOTS`), and rooms follow `Programme.ROOMS`. |
+| D2003 | Each row: `slot`, `start`, `end` (as D1801), `room`, `talkId`, `title`, `format`, `speakers`. Talk and speaker data **as they are right now**, read when the request runs, not when the talk was scheduled. |
+| D2004 | `speakers` are **names**: the main speaker first, then the co-speakers in the order they were added (D1303). JSON: an array of strings. |
+| D2005 | JSON `ProgrammeRow` field order as the spec's schema: `slot, start, end, room, talkId, title, format, speakers`. This differs from the scheduling `Entry` (`room, slot, …`), so build it explicitly; don't reuse `Programme.entry`. |
+| D2006 | CSV: UTF-8 (**no BOM**: it must *start* with the header), served as `text/csv` **even when the client asks for JSON**. |
+| D2007 | CSV header, exactly: `slot,start,end,room,talkId,title,format,speakers`. |
+| D2008 | CSV fields per RFC 4180: quoted **only** when they contain a comma, a `"` or a line break (`\n` or `\r`); a `"` inside is doubled (`"Kotlin, ""really"" fast"`); everything else written as it is (no trimming, no escaping). |
+| D2009 | CSV line endings are `\n` (**not** RFC 4180's `\r\n`: the spec overrides the RFC here). Every line, the last included, ends in `\n`; no blank line at the end. A line break *inside* a quoted field is kept as it is. |
+| D2010 | CSV `speakers` field: the names joined by `"; "` (semicolon, space), e.g. `Grace Hopper; Ada Lovelace`. |
+| D2011 | Empty programme: JSON `[]`; CSV the header line alone (`slot,…,speakers\n`). |
+| D2012 | No change to any other endpoint, and no new field on the Talk view (D1900). |
+
+**Open questions** (for `/plan-feature` and probably the PO; our proposed default in brackets):
+
+| # | Question |
+|---|---|
+| D2050 | **Withdrawn talks on the programme.** D1807 keeps a talk on the programme when it is withdrawn later, and D2001 says "one row per scheduled talk, nothing else". So the printed programme and the room signs show a withdrawn talk. [Include it, as both specs literally say; ask the PO, because it is the opposite of what an organiser wants on a sign.] |
+| D2051 | **Two rooms at once, after the fact.** D1806 checks "nobody speaks in two rooms at once" only at PUT. A co-speaker added later (D1807 allows it) can make the export show one person in two rooms in the same slot. [Show it as it is now (D2003); the export doesn't re-check scheduling rules.] |
+| D2052 | **`text/csv` vs `text/csv;charset=UTF-8`.** `spring.servlet.encoding.force=true` (D1653) adds `;charset=UTF-8`. The spec says "served as `text/csv`" and "UTF-8". [Keep the charset parameter: it states UTF-8 and media-type matching ignores parameters; confirm against the check.] |
+| D2053 | **Status codes for a bad `Accept`.** The CSV must ignore `Accept` (D2006). Should `GET /programme` with `Accept: text/csv` be a `406` or JSON anyway? [JSON anyway: no 406s on read-only views.] |
+| D2054 | **A `"; "` inside a speaker name** makes the CSV `speakers` field ambiguous. Names are free text (D1000). [Write as is; there is no escape mechanism in the spec.] |
+| D2055 | **Formula-looking fields** (`=`, `+`, `-`, `@` first) are a CSV-injection risk in spreadsheets, but D2008 says fields are written as they are. [Write as is: escaping changes the value and breaks the check.] |
+| D2056 | `Content-Disposition` (download filename) is not specified. [None, or `inline`: don't invent one the print shop's tooling might not expect.] |
+
+**Design notes** (constraints `/plan-feature` must respect):
+
+| # | Note |
+|---|---|
+| D2080 | **Content negotiation trap.** `@GetMapping(value = "/programme.csv", produces = "text/csv")` makes Spring answer `406` to `Accept: application/json`, breaking D2006. Set the `Content-Type` header on the `ResponseEntity` instead (as `/admin/talks.csv` does): a preset content type skips negotiation. |
+| D2081 | **One ordering, two writers.** Build the row list once (`ConferenceService`, D1730), then write it as JSON or CSV, so D2001's "same order" can't drift. |
+| D2082 | **No N+1.** Read entries, talks, main speakers and co-speakers in a fixed number of queries (as the talk lists do), not one speaker lookup per row like `/admin/talks.csv` (D1720: pool of 5). |
+| D2083 | Read-only, so no locks; a read under concurrent scheduling sees a consistent snapshot if it runs in one transaction (`@Transactional(readOnly = true)`), which keeps JSON and CSV built from the same state. |
+| D2084 | Trailing slashes (`/programme/`, `/programme.csv/`) work through D1652. `/programme` doesn't clash with `/programme/{room}/{slot}` (different segment counts). |
+| D2085 | `start`/`end` come from `Programme.SLOTS` (D1801), the same constants as scheduling, so the two features can't disagree. |
+| D2086 | Titles can hold commas, quotes and line breaks (only a blank title is rejected, D1101), so D2008 quoting is exercised by real data, not just edge cases. Test with a title containing `,`, `"`, `\n` and `\r\n`, and a non-ASCII name (UTF-8). |
 
 ## Evidence
 
@@ -358,7 +409,8 @@ harness check may exercise them, and the base features' checks pass today.
 | Acceptance | `AcceptanceTest` (3×9 concurrent decisions; withdraw racing accept) | `examples/acceptance.hurl` |
 | Health | `HealthTest`, `HealthContractTest` | — |
 | Scheduling | `SchedulingTest` (one place × 12 talks, one talk × 15 places, 9-way speaker clash, PUT racing DELETE) | `examples/scheduling.hurl` |
-| Workshop registration | none yet | none yet |
+| Workshop registration | `WorkshopRegistrationTest` | `examples/workshop-registration.hurl` |
+| Programme export | none yet | none yet |
 | Spring Boot 4 | `UpgradeContractTest` (P1–P4, P11, P12, P15–P20) | `examples/spring-boot-4.hurl` |
 
 Gate: `workflow/scripts/verify.sh` — `./mvnw package`, then every `examples/*.hurl` against a local
