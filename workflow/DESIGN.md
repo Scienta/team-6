@@ -37,9 +37,9 @@ spec, assume this document is stale until someone has reconciled it.
 | Area | Rules | Feature request | Our decisions | Status |
 |---|---|---|---|---|
 | Speakers | D1000–D1099 | `specs/speakers.md` (Version 1) | — | base, claimed |
-| Talks | D1100–D1199 | `specs/talks.md` (Version 1) | — | base, claimed |
+| Talks | D1100–D1199 | `specs/talks.md` (Version 1) + change request `specs/submission-cap-cr.md` (Version 1, released tick 180) | `workflow/specs/submission-cap-cr.md` (rules + PO-1..4) | base, claimed; change request unclaimed, not implemented, D1105/D1106 changed in place |
 | Ratings | D1200–D1299 | `specs/ratings.md` (Version 1) + change request `specs/ratings-cr.md` (Version 1, released tick 167) | `workflow/specs/ratings-cr.md` | base, claimed; change request implemented (not yet shipped), unclaimed; D1204/D1206 changed in place |
-| Co-speakers | D1300–D1399 | `specs/co-speakers.md` (Version 1) | `workflow/specs/co-speakers.md` | released tick 0, claimed tick 70 |
+| Co-speakers | D1300–D1399 | `specs/co-speakers.md` (Version 1) | `workflow/specs/co-speakers.md` | released tick 0, claimed tick 70; D1306 replaced and D1350 extended by submission-cap-cr |
 | Acceptance | D1400–D1499 | `specs/acceptance.md` (Version 1) | `workflow/specs/acceptance.md` | released tick 20, claimed tick 107 |
 | Workshop registration | D1500–D1599 | `specs/workshop-registration.md` (Version 1) | `workflow/specs/workshop-registration.md` | released tick 67, claimed tick 123 |
 | Platform / Spring Boot 4 | D1600–D1699 | `specs/spring-boot-4.md` (Version 1) | `workflow/specs/spring-boot-4.md` | released tick 40, claimed tick 98 |
@@ -117,8 +117,8 @@ Source: `specs/talks.md` (Version 1). Base feature, claimed, all checks OK.
 | D1102 | `durationMinutes` is decided by `format` alone — the client never picks it: `LIGHTNING_10`→10, `LIGHTNING_20`→20, `PRESENTATION`→45, `WORKSHOP`→120. |
 | D1103 | Formats and levels are exactly these capitalised strings; nothing else is valid. Levels: `BEGINNER`, `INTERMEDIATE`, `ADVANCED`. |
 | D1104 | A new talk is `SUBMITTED`. |
-| D1105 | A speaker may have at most **3** talks. Must hold under a concurrent submission rush (see D1901). |
-| D1106 | **[amended by acceptance PO-2]** The 3-talk limit counts only talks that are not `WITHDRAWN` or `REJECTED`. |
+| D1105 | **[submission-cap-cr R1, R4]** A speaker may have at most **3** talks, counting talks where they are the main speaker **and** talks they co-speak on. Must hold under a rush of submissions and co-speaker invitations together (see D1354, D1901). *Was (talks V1): only their own talks.* |
+| D1106 | **[acceptance PO-2, submission-cap-cr R2, R5, PO-4]** The limit counts only talks that are not `WITHDRAWN` or `REJECTED`, for the main speaker and the co-speakers alike; `SUBMITTED`, `WAITLISTED` and `ACCEPTED` count. Removing a co-speaker frees their place at once. Speakers already over the limit keep everything but get nothing new until below it. |
 | D1107 | A speaker can list their own talks, oldest first. |
 | D1150 | `submittedAt`: UTC, `yyyy-MM-dd'T'HH:mm:ss.SSS+00:00` — always milliseconds, offset always `+00:00`, never `Z`. Legacy tools parse it as a plain string. |
 | D1151 | `submittedOn`: the UTC date of `submittedAt`, `yyyy-MM-dd`. |
@@ -155,12 +155,13 @@ Released tick 0, **claimed tick 70**.
 | D1303 | `coSpeakerIds` in insertion order; `[]` when none. |
 | D1304 | Adding an existing co-speaker changes nothing — including when the talk already has 2. |
 | D1305 | `GET /speakers/{id}/talks` and `?speakerId=` show only talks where they are the **main** speaker. |
-| D1306 | Co-speaking never counts towards the 3-talk limit; a speaker at the limit can still co-speak. |
+| D1306 | **[submission-cap-cr R3, replaces co-speakers R7]** Co-speaking counts towards the limit (D1105). A speaker at the limit can't be added as co-speaker to a talk still in the running, but can be added to a `REJECTED` or `WITHDRAWN` talk. *Was (co-speakers V1): co-speaking never counts; a speaker at the limit can still co-speak.* Over-limit speaker added to a rejected/withdrawn talk: **PO? (open)**, default allowed. |
 | D1307 | Removed then re-added goes to the **end** of the order. **[ours]** |
-| D1350 | **[ours]** PUT ok → `200` + full Talk. Already a co-speaker → `200` unchanged. Talk or speaker unknown → `404`. Speaker is the main speaker → `400`, talk unchanged, also when it already has 2 (PO-2: `409` was FAULTY ticks 71–89, `200` still FAULTY at tick 90, `400` passes `co-speakers/check-2`). Already 2 others → `409`. |
+| D1350 | **[ours]** PUT ok → `200` + full Talk. Already a co-speaker → `200` unchanged. Talk or speaker unknown → `404`. Speaker is the main speaker → `400`, talk unchanged, also when it already has 2 (PO-2: `409` was FAULTY ticks 71–89, `200` still FAULTY at tick 90, `400` passes `co-speakers/check-2`). Already 2 others → `409`. **[submission-cap-cr]** Co-speaker at the limit, talk in the running → `409` (PO-1); already a co-speaker → still `200` unchanged even at or over the limit (PO-2); main speaker → still `400`, it wins over the limit (PO-3). |
 | D1351 | **[ours]** DELETE ok → `200` + full Talk. Not a co-speaker, incl. unknown speaker → `404` unchanged (PO-1). Talk unknown → `404`. |
 | D1352 | **[ours]** Non-numeric path id → `400` (Spring type mismatch). |
 | D1353 | Concurrency: PUT locks the talk row `FOR UPDATE`, then counts and inserts in one transaction. Unique `(talk_id, speaker_id)` with `ON CONFLICT DO NOTHING` covers D1304 under double-clicks. |
+| D1354 | **[submission-cap-cr R4, ours — not implemented]** The co-speaker PUT must also lock the **co-speaker's speaker row** `FOR UPDATE` before counting, always talk row → speaker row. Today a submission (speaker-row lock, D1105) and an invitation (talk-row lock, D1353) for the same speaker don't block each other, so both can take the last place. No cycle: submissions lock only the speaker row; decisions and withdrawals lock only the talk row and can only free places. No constraint can span the count; the lock is the argument. |
 
 ## D1400–D1499 Acceptance
 
@@ -334,7 +335,7 @@ Released tick 100. Open PO questions PO-?1..6 carry our defaults.
 | # | Rule |
 |---|---|
 | D1900 | **Every response returning a Talk returns the complete Talk view** — all fields in the table above, from every feature. "Wherever a talk is shown" appears in ratings, co-speakers and acceptance; it means all eight endpoints listed there. |
-| D1901 | **Five specs independently demand correctness under concurrent writes:** D1105 (submission rush), D1207 (reviewers double-clicking), D1408 (committee racing), D1502 (registration rush), D1808 (committee scheduling at once). With a 5-connection pool and **no advisory locks**, the pattern is `SELECT … FOR UPDATE` on the contended row inside `@Transactional`, plus a database constraint as backstop. A constraint is the only unconditional proof; locks are only as good as the code around them. |
+| D1901 | **Five specs independently demand correctness under concurrent writes** (six with submission-cap-cr R4, D1354): D1105 (submission rush), D1207 (reviewers double-clicking), D1408 (committee racing), D1502 (registration rush), D1808 (committee scheduling at once). With a 5-connection pool and **no advisory locks**, the pattern is `SELECT … FOR UPDATE` on the contended row inside `@Transactional`, plus a database constraint as backstop. A constraint is the only unconditional proof; locks are only as good as the code around them. |
 | D1902 | **Case-insensitive email, specified twice:** D1003 (speakers) and D1503 (attendees). Same comparison rule, separate tables, and both must return the original casing (D1004, D1504). |
 | D1903 | **Exact string formats are contractual** — D1150, D1151, D1250, D1801, and the programme CSV (D2006–D2010). Legacy clients parse them as plain strings. Never let a locale or JDK default decide them. |
 | D1904 | Error-code conventions, as settled in acceptance and co-speakers **[ours]**: `400` malformed input, `403` wrong actor, `404` unknown entity, `409` rule violation / illegal state, `415` wrong Content-Type. Validate body → entity exists → authorisation → state. |
@@ -409,6 +410,7 @@ implemented, unclaimed. Rules D2000–D2012 are from the feature request; D2050�
 | Talks | `TalksTest` (incl. concurrent 3-talk limit) | `examples/talks.hurl` |
 | Ratings | `RatingsTest` (incl. many reviewers at once, double-click), `ConferenceServiceTest` | `examples/ratings.hurl` |
 | Ratings change request | `RatingsCrTest` (spec's ties 25/8 → 3.12, 27/8 → 3.38, trim at 5, raw `4.00`); old-rounding pins updated in `RatingsTest`, `FormatsTest`, `UpgradeContractTest`, `AdminReportsTest` | `examples/ratings-cr.hurl`; `spring-boot-4.hurl` updated |
+| Submission cap change request | planned: tests per rule and PO-1..4, a concurrent test mixing submissions and co-speaker PUTs for one speaker; `CoSpeakersTest`'s old "limit doesn't apply" test updated | planned: `examples/submission-cap-cr.hurl`; `co-speakers.hurl` updated |
 | Formats | `FormatsTest`, `UtilsTest` (byte-exact `ratedAtDisplay`) | — |
 | Admin reports | `AdminReportsTest` | — |
 | Co-speakers | `CoSpeakersTest` (10 concurrent PUTs → exactly 2) | `examples/co-speakers.hurl` |
