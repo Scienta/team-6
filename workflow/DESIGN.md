@@ -37,7 +37,7 @@ spec, assume this document is stale until someone has reconciled it.
 | Area | Rules | Feature request | Our decisions | Status |
 |---|---|---|---|---|
 | Speakers | D1000–D1099 | `specs/speakers.md` (Version 1) | — | base, claimed |
-| Talks | D1100–D1199 | `specs/talks.md` (Version 1) + change request `specs/submission-cap-cr.md` (Version 1, released tick 180) | `workflow/specs/submission-cap-cr.md` (rules + PO-1..4) | base, claimed; change request unclaimed, not implemented, D1105/D1106 changed in place |
+| Talks | D1100–D1199 | `specs/talks.md` (Version 1) + change request `specs/submission-cap-cr.md` (Version 1, released tick 180) | `workflow/specs/submission-cap-cr.md` (rules + PO-1..5) | base, claimed; change request unclaimed, not implemented, D1105/D1106 changed in place |
 | Ratings | D1200–D1299 | `specs/ratings.md` (Version 1) + change request `specs/ratings-cr.md` (Version 1, released tick 167) | `workflow/specs/ratings-cr.md` | base, claimed; change request implemented (not yet shipped), unclaimed; D1204/D1206 changed in place |
 | Co-speakers | D1300–D1399 | `specs/co-speakers.md` (Version 1) | `workflow/specs/co-speakers.md` | released tick 0, claimed tick 70; D1306 replaced and D1350 extended by submission-cap-cr |
 | Acceptance | D1400–D1499 | `specs/acceptance.md` (Version 1) | `workflow/specs/acceptance.md` | released tick 20, claimed tick 107 |
@@ -155,7 +155,7 @@ Released tick 0, **claimed tick 70**.
 | D1303 | `coSpeakerIds` in insertion order; `[]` when none. |
 | D1304 | Adding an existing co-speaker changes nothing — including when the talk already has 2. |
 | D1305 | `GET /speakers/{id}/talks` and `?speakerId=` show only talks where they are the **main** speaker. |
-| D1306 | **[submission-cap-cr R3, replaces co-speakers R7]** Co-speaking counts towards the limit (D1105). A speaker at the limit can't be added as co-speaker to a talk still in the running, but can be added to a `REJECTED` or `WITHDRAWN` talk. *Was (co-speakers V1): co-speaking never counts; a speaker at the limit can still co-speak.* Over-limit speaker added to a rejected/withdrawn talk: **PO? (open)**, default allowed. |
+| D1306 | **[submission-cap-cr R3, replaces co-speakers R7]** Co-speaking counts towards the limit (D1105). A speaker at the limit can't be added as co-speaker to a talk still in the running, but can be added to a `REJECTED` or `WITHDRAWN` talk. *Was (co-speakers V1): co-speaking never counts; a speaker at the limit can still co-speak.* A speaker already over the limit can also be added to a `REJECTED` or `WITHDRAWN` talk (PO-5). |
 | D1307 | Removed then re-added goes to the **end** of the order. **[ours]** |
 | D1350 | **[ours]** PUT ok → `200` + full Talk. Already a co-speaker → `200` unchanged. Talk or speaker unknown → `404`. Speaker is the main speaker → `400`, talk unchanged, also when it already has 2 (PO-2: `409` was FAULTY ticks 71–89, `200` still FAULTY at tick 90, `400` passes `co-speakers/check-2`). Already 2 others → `409`. **[submission-cap-cr]** Co-speaker at the limit, talk in the running → `409` (PO-1); already a co-speaker → still `200` unchanged even at or over the limit (PO-2); main speaker → still `400`, it wins over the limit (PO-3). |
 | D1351 | **[ours]** DELETE ok → `200` + full Talk. Not a co-speaker, incl. unknown speaker → `404` unchanged (PO-1). Talk unknown → `404`. |
@@ -410,7 +410,7 @@ implemented, unclaimed. Rules D2000–D2012 are from the feature request; D2050�
 | Talks | `TalksTest` (incl. concurrent 3-talk limit) | `examples/talks.hurl` |
 | Ratings | `RatingsTest` (incl. many reviewers at once, double-click), `ConferenceServiceTest` | `examples/ratings.hurl` |
 | Ratings change request | `RatingsCrTest` (spec's ties 25/8 → 3.12, 27/8 → 3.38, trim at 5, raw `4.00`); old-rounding pins updated in `RatingsTest`, `FormatsTest`, `UpgradeContractTest`, `AdminReportsTest` | `examples/ratings-cr.hurl`; `spring-boot-4.hurl` updated |
-| Submission cap change request | planned: tests per rule and PO-1..4, a concurrent test mixing submissions and co-speaker PUTs for one speaker; `CoSpeakersTest`'s old "limit doesn't apply" test updated | planned: `examples/submission-cap-cr.hurl`; `co-speakers.hurl` updated |
+| Submission cap change request | planned: tests per rule and PO-1..5, a concurrent test mixing submissions and co-speaker PUTs for one speaker; `CoSpeakersTest`'s old "limit doesn't apply" test updated | planned: `examples/submission-cap-cr.hurl`; `co-speakers.hurl` updated |
 | Formats | `FormatsTest`, `UtilsTest` (byte-exact `ratedAtDisplay`) | — |
 | Admin reports | `AdminReportsTest` | — |
 | Co-speakers | `CoSpeakersTest` (10 concurrent PUTs → exactly 2) | `examples/co-speakers.hurl` |

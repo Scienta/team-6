@@ -30,7 +30,7 @@ are for `/plan-feature submission-cap-cr`.
 | same, but they are already a co-speaker of this talk | `200`, nothing changes, also at or over the limit (PO-2) |
 | same, but they are the talk's main speaker | `400`, as co-speakers PO-2; the main-speaker check wins over the limit (PO-3) |
 | check order on the co-speaker `PUT` | `404` talk/speaker → `400` main speaker → `200` already a co-speaker → `409` talk has 2 co-speakers → `409` co-speaker at the limit. **To confirm in `/plan-feature`:** the relative order of the two `409`s isn't observable except in the message. |
-| speaker over the new limit, added to a rejected or withdrawn talk | **PO?** (question 4 at tick 188, not answered). Default: allowed, since those talks don't count (R3). |
+| speaker over the new limit, added to a rejected or withdrawn talk | `200`, allowed: those talks don't count (R3, PO-5) |
 | speaker over the limit, `DELETE` as co-speaker | allowed as today; it frees a place (R2) |
 
 ## Product owner answers
@@ -41,8 +41,8 @@ are for `/plan-feature submission-cap-cr`.
 | PO-2 | Re-adding an existing co-speaker who is at or over the cap: still a no-op? | `200`, nothing changes | 188 | pending |
 | PO-3 | Adding the talk's main speaker as co-speaker when they're at the cap: `400` or `409`? | `400`: the main-speaker check wins | 188 | pending |
 | PO-4 | Do `WAITLISTED` talks count towards the cap? | yes | 188 | pending |
+| PO-5 | Can a speaker already over the cap be added as co-speaker to a `REJECTED` or `WITHDRAWN` talk? | yes, allowed (our default, accepted) | 192 | pending |
 
-Not yet answered: question 4 (over-cap speaker added to a rejected/withdrawn talk; default above).
 
 ## Effects on existing endpoints
 
