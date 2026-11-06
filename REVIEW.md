@@ -69,6 +69,44 @@ the deploy workflow), and against what (the spec, its examples, your own checks)
   JSON `Accept`, the existing `Utils.csv` isn't RFC 4180, and the spec overrides RFC 4180's CRLF
   (D2008, D2009, D2080; `ProgrammeExportController` cites D2080).
 
+### What reviewing agent output taught us, for our day jobs
+
+1. **The agents did what we told them; the risk was in what we assumed.** Every bug that got past
+   us was a decision we had guessed, never a coding mistake. The agents implemented, tested and
+   reviewed those guesses perfectly. A review agent that checks code against our own spec can only
+   confirm the spec. *At work:* keep an explicit list of "what the requirement didn't say, and
+   what we decided", and have a person or the customer go through that list, not the diff.
+2. **At least one check needs a source of truth outside our own decisions.** For us that was the
+   harness's real traffic in our request log. At work it's production logs, contract tests against
+   the consumer, or a demo to the customer.
+3. **"The customer said so" isn't the same as "the system needs it".** Three times a product-owner
+   answer went against how the rest of the system already behaved, and each time the existing
+   behaviour was right. *At work:* when a stakeholder's answer breaks a pattern the system already
+   follows, show them the precedent before building on it.
+4. **Lessons belong in the tools, not only in a log.** We wrote good lessons here all afternoon, but
+   our skills and templates stopped changing at 14:37, so the agents never applied the later ones.
+   For a team that works through agents, the skills and rules files *are* the process. *At work:*
+   after every incident ask "which template, prompt or gate changes?", and commit that change on
+   its own with the reason.
+5. **Test with realistic data and realistic operations, not just the rules.** What cost us most
+   wasn't logic: an N+1 query that only showed up with thousands of rows, and a redeploy on every
+   push. Every test passed on an empty database against a service that never restarts.
+6. **With agents, the code is cheap; coordinating it is the cost.** Five people with agents on one
+   `main` gave us a fix lost in a working-tree reset, merge markers committed, deploys running into
+   each other, and commit messages from `fix: … (check-1)` to "Improvements". *At work:* give each
+   person a worktree or branch, have one push owner or a release window, and make the shared
+   workflow the easiest path, so nobody bypasses it when they're in a hurry.
+7. **Pin the behaviour before changing the platform** (see §5). For every framework or runtime
+   upgrade.
+8. **Never rely on platform defaults for formats.** Locale data, timezones and how characters are
+   counted changed between JDKs and machines. Anything outside systems depend on gets written
+   explicitly in our code, with a byte-exact test.
+9. **Logging is a feature.** Request logging was the first thing we added, and the main way we
+   learned what clients actually send.
+10. **Put human checkpoints where the risk is.** Approving plans and saying "push" were never the
+    slow part, and they prevented damage. The checkpoint we were missing was a person going through
+    the *decisions we invented*, not more code review.
+
 ## 3. Claim log
 
 <!-- A running entry per feature or change request, written when you claim or decide to skip it:
@@ -260,9 +298,16 @@ acceptance, where the harness had just rejected `200` for a repeated decision. T
 
 <!-- One thing, and why. -->
 
-**Test against production-sized data and production deploys from the first hour, not just the
-rules.** Our tests checked every business rule, but on an empty database and a service that never
-restarts. The two things that cost us the most weren't rule bugs: a talk list that got slower with
-every tick (2 queries per talk), and container restarts on every push. Together they lost us more than
-any FAULTY check. A Hurl file with a `duration` limit, a seeded database of a few thousand rows, and a
-deploy rule that skips docs would have caught both on day one.
+**Spend human review on the assumptions, not the code.** Agents wrote, tested and reviewed our code
+well. Everything that got past us was a decision nobody had written down as a decision: a status code
+the request didn't give, or a product-owner answer that contradicted the rest of the system. Our tests
+and our review agent agreed with those guesses because they were built from them. Next time, every
+plan would list the decisions we invented next to the precedent for each one, a person would review
+*that list* before any code is written, and each lesson from a miss would go straight into the
+skill or template, so the agents apply it in the next feature. In day-to-day work this is what
+agents change most: code review gets cheaper, and finding the requirements nobody stated becomes the
+job.
+
+(Runner-up: test with production-sized data and real deploys from the first hour. A talk list that
+got slower with every tick and a restart on every push cost us more than any FAULTY check. See §2,
+point 5.)
