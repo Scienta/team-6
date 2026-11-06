@@ -37,7 +37,7 @@ spec, assume this document is stale until someone has reconciled it.
 |---|---|---|---|---|
 | Speakers | D1000–D1099 | `specs/speakers.md` (Version 1) | — | base, claimed |
 | Talks | D1100–D1199 | `specs/talks.md` (Version 1) | — | base, claimed |
-| Ratings | D1200–D1299 | `specs/ratings.md` (Version 1) | — | base, claimed |
+| Ratings | D1200–D1299 | `specs/ratings.md` (Version 1) + change request `specs/ratings-cr.md` (V1, tick 167) | `workflow/specs/ratings-cr.md` | base, claimed; change request unclaimed, D1204/D1206 changed in place |
 | Co-speakers | D1300–D1399 | `specs/co-speakers.md` (Version 1) | `workflow/specs/co-speakers.md` | released tick 0, claimed tick 70 |
 | Acceptance | D1400–D1499 | `specs/acceptance.md` (Version 1) | `workflow/specs/acceptance.md` | released tick 20, claimed tick 107 |
 | Workshop registration | D1500–D1599 | `specs/workshop-registration.md` (Version 1) | `workflow/specs/workshop-registration.md` | released tick 67, claimed tick 123 |
@@ -124,7 +124,7 @@ Source: `specs/talks.md` (Version 1). Base feature, claimed, all checks OK.
 
 ## D1200–D1299 Ratings
 
-Source: `specs/ratings.md` (Version 1). Base feature, claimed, all checks OK.
+Source: `specs/ratings.md` (Version 1), **changed by `specs/ratings-cr.md`** (change request, released tick 167; decisions in `workflow/specs/ratings-cr.md`). Base feature, claimed. D1204 and D1206 are changed in place; the old rule is kept in the row for reference.
 
 | # | Rule |
 |---|---|
@@ -132,9 +132,10 @@ Source: `specs/ratings.md` (Version 1). Base feature, claimed, all checks OK.
 | D1201 | A score is a whole number 1–5. Nothing else is a score. |
 | D1202 | At most one rating per reviewer per talk; rating again replaces the score. `PUT /talks/{id}/ratings/{reviewerId}` → `200`. |
 | D1203 | Every talk shows `ratingCount` and `averageRating` **wherever a talk is shown** (see D1900). |
-| D1204 | `averageRating` is rounded to one decimal, halves up: `4,4,4,5` → 4.25 → `4.3`. An unrated talk has no average. |
+| D1204 | **[ratings-cr R1, R2]** `averageRating`: with ≥5 ratings, leave out exactly one highest and one lowest score; then round to **2 decimals, half to even** (`3.125` → `3.12`, `3.375` → `3.38`; `4,4,4,5` → `4.25`). An unrated talk has no average. *Was (ratings V1): one decimal, halves up, `4.25` → `4.3`.* |
 | D1205 | `GET /talks` lists all talks oldest first; `?speakerId=` filters to one speaker. |
-| D1206 | `?sort=rating` ranks by rounded average desc, then by `ratingCount` desc, then oldest first. Unrated talks last. |
+| D1206 | `?sort=rating` ranks by the rounded average (D1204, so the trimmed 2-decimal one since ratings-cr R4) desc, then by `ratingCount` desc, then oldest first. Unrated talks last. |
+| D1208 | **[ratings-cr, ours]** `ratingCount` counts every reviewer, also the two left out of the average (R3). Calculation: `(sum − max − min) / (count − 2)` at ≥5, exact `BigDecimal`, scale 2, `HALF_EVEN`. `/admin/stats` keeps its own average (D1950); `/admin/talks.csv` prints the new value. |
 | D1207 | Concurrent ratings on one talk: no rating lost, nobody counted twice, double-clicks safe (see D1901). |
 | D1250 | `ratedAtDisplay`: time of the latest rating, UTC, US short format `M/d/yy, h:mm AM` — no leading zeros on month/day/hour, 2-digit year, 12-hour clock, **exactly one ordinary space** before AM/PM. E.g. `11/4/26, 1:05 PM`, `11/4/26, 12:00 AM`. See D1601 — this collides with Spring Boot 4. |
 
