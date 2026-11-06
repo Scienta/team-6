@@ -5,11 +5,13 @@ features. Each step has a skill in `.claude/skills/` that an agent runs, and a h
 where noted. `/feature <slug>` runs the whole feature loop and stops at every checkpoint.
 
 ```
- start ─> sync ─> spec ─> plan ─> implement ─> verify ─> ship ─> CLAIM (human) ─> watch ─> log
-   │       │       │ ▲     │ ▲         ▲         │  │      │                        │
-   │       │       │ └PO?  │ └approve  └─ fix ───┘  │      └ smoke on deployed       ├ FAULTY → triage → implement
-   │       │       └ /po-answers                    └ review findings                └ regression → rollback
-   └ git pull, teammates' work                                               (poll: /loop /feature-status)
+ start ─> sync ─> spec ─> design ─> plan ─> implement ─> verify ─> ship ─> CLAIM (human) ─> watch ─> log
+   │       │       │ ▲      │         │ ▲         ▲         │  │      │                        │
+   │       │       │ └PO?   └ DESIGN.md └approve  └─ fix ───┘  │      └ smoke on deployed       ├ FAULTY → triage → implement
+   │       │       └ /po-answers ──> DESIGN.md                 └ review findings                └ regression → rollback
+   └ git pull, teammates' work                                                          (poll: /loop /feature-status)
+
+ DESIGN.md is updated whenever a rule or decision changes: spec, PO answer, review finding, triage.
 
  improvement track:  analyse ─> plan ─> approve ─> implement ─> measure ─> verify ─> ship      (/improve)
  end of day:         /wrap-up  (REVIEW.md sections 1-6 before 17:00)
@@ -22,17 +24,18 @@ where noted. `/feature <slug>` runs the whole feature loop and stops at every ch
 | 0 | **Start**: `git pull --rebase`; what have teammates done (git log, `workflow/specs`, `workflow/plans`)? | `/sync-specs` | up-to-date tree | no duplicate work |
 | 1 | **Sync**: what's released or changed? | `/sync-specs` | `specs/<slug>.md` (organisers' copy), `specs/<slug>.diff` when changed | - |
 | 2 | **Spec**: rules + our decisions (status codes, edge cases, concurrency) | `/plan-feature` | `workflow/specs/<slug>.md` from [templates/feature-spec.md](templates/feature-spec.md) | open **PO?** questions go to a person, numbered with our default |
-| 2b | **PO answers**: a person asks the product owner; the answers are recorded | `/po-answers <slug> <answers>` | "Product owner answers" table in `workflow/specs/<slug>.md`, decision tables updated, plan's test table gains a `PO-n` row | every answer has a test tagged `// PO-n` |
+| 2b | **PO answers**: a person asks the product owner; the answers are recorded | `/po-answers <slug> <answers>` | "Product owner answers" table in `workflow/specs/<slug>.md`, decision tables updated, plan's test table gains a `PO-n` row, the affected D-rules in `DESIGN.md` updated | every answer has a test tagged `// PO-n`; `DESIGN.md` agrees with the answer |
+| 2c | **Design**: fold the feature into the combined check document | `/plan-feature` | the feature's rules and decisions in [DESIGN.md](DESIGN.md) as D-rules, its fields in the Talk view, its concurrency and cross-cutting effects, a row in the source map | every `Rn` has a D-rule; no D-rule contradicts another area (a contradiction is a **PO?** or a decision, not a silent overwrite) |
 | 3 | **Plan**: files to touch, tests to write, in order | `/plan-feature` | `workflow/plans/<slug>.md` from [templates/plan.md](templates/plan.md) | **human approves the plan** |
 | 4 | **Implement**: tests first (JUnit + Hurl), then code | `/implement-feature` | code, `src/test/.../<Feature>Test.java`, `examples/<slug>.hurl` | tests red before, green after; `verify.sh --quick` |
-| 5 | **Verify**: the full gate + an independent review | `/verify-feature` | `workflow/scripts/verify.sh` output; rule → code → test table from a review agent | every rule has a test; script passes |
-| 5b | **Fix review findings**: each finding is fixed (with a test) or recorded as a decision in our spec | `/verify-feature` → `/implement-feature` | stronger tests, spec rows for accepted behaviour | full gate passes again |
+| 5 | **Verify**: the full gate + an independent review | `/verify-feature` | `workflow/scripts/verify.sh` output; rule → code → test table from a review agent, checked against `DESIGN.md` as well as the feature's spec | every rule has a test; script passes; `DESIGN.md`, `workflow/specs/<slug>.md` and the code agree |
+| 5b | **Fix review findings**: each finding is fixed (with a test) or recorded as a decision in our spec | `/verify-feature` → `/implement-feature` | stronger tests, spec rows for accepted behaviour, the same rows in `DESIGN.md` | full gate passes again |
 | 6 | **Ship**: group the commits, push, deploy, smoke-test the deployed service | `/ship` | one commit per feature/topic on `main`, deploy run green, `/health` = new SHA, the feature's Hurl file green against `TEAM_URL` (if the user agrees) | **human says push** |
 | 7 | **Claim** | (a person, on the harness) | claim button | evidence from steps 5-6 shown to the person |
 | 8 | **Watch**: the new feature's checks **and every other feature's**: a change (e.g. a PO answer) can affect claimed features | `/feature-status`, polled with `/loop 10m /feature-status` | `harness.sh feedback` | all checks OK; no score bleeding |
-| 9a | **Triage** a FAULTY check | `/triage-check` | failing request from transcript + logs, a reproducing test, fix | back to step 4 |
+| 9a | **Triage** a FAULTY check | `/triage-check` | failing request from transcript + logs, a reproducing test, fix; a changed decision goes into `workflow/specs/<slug>.md` **and** `DESIGN.md` | back to step 4 |
 | 9b | **Roll back** when a deploy breaks claimed features and the fix isn't quick | `/ship` (rollback) | `git revert <sha>` + push, after the user agrees | checks OK again |
-| 10 | **Log**: REVIEW.md claim log / "harness caught" | (every skill appends) | `REVIEW.md` | - |
+| 10 | **Log**: REVIEW.md claim log / "harness caught"; the feature's status in the `DESIGN.md` source map | (every skill appends) | `REVIEW.md`, `DESIGN.md` | - |
 
 ## Improvement track
 
@@ -63,7 +66,13 @@ harness caught, reusable artifacts and one thing we'd do differently, plus links
 
 ## Conventions
 
-- `specs/` is the organisers' text, untouched. `workflow/specs/` is ours: the decisions.
+- `specs/` is the organisers' text, untouched. `workflow/specs/` is ours: the decisions, per feature.
+  [DESIGN.md](DESIGN.md) is the combined check document for the whole service: every feature's
+  rules and decisions, the non-functional requirements and the cross-cutting rules, in one place.
+  Where it and a feature request disagree, the feature request wins and `DESIGN.md` gets fixed.
+- `DESIGN.md` rules are numbered `D1000` and up, never reused or renumbered. A new feature takes the
+  next free block of 100 (`D1800`, then `D2000` and up); each D-rule cites the feature's `Rn` or
+  `PO-n`, and our own decisions are marked **[ours]**.
 - Rule ids `R1..Rn` in our spec are reused in test names, Hurl comments and the plan, so a reviewer
   can trace every rule to a test.
 - Product owner answers are numbered `PO-1..n` per feature. The answer, the tick it was asked and
@@ -72,7 +81,8 @@ harness caught, reusable artifacts and one thing we'd do differently, plus links
   feature (e.g. which talks count towards a limit): that feature's spec gets a pointer to the
   answer, and its tests are re-run.
 - A change request (a spec whose `Version:` goes up) goes through the same loop. The plan starts
-  from `specs/<slug>.diff`.
+  from `specs/<slug>.diff`, and the affected D-rules are changed in place, with the change noted in
+  the rule's row.
 - Plans carry a status (`draft` → `approved` → `done`) and a "Done when" checklist that is ticked
   as the steps pass.
 - Technical requirements (runtime, platform limits, code structure, the gate) are the

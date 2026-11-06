@@ -20,6 +20,7 @@ for the user's answer:
 6. **Checkpoint:** a person claims on the harness. Afterwards, check `/feature-status` (all
    features, not just this one) on the following ticks, and `/triage-check` anything FAULTY.
    Suggest `/loop 10m /feature-status` to keep watching.
-7. Make sure `REVIEW.md` has the claim log row and anything the harness caught.
+7. Make sure `REVIEW.md` has the claim log row and anything the harness caught, and that the
+   feature's status in the `workflow/DESIGN.md` source map says claimed, with the tick.
 
 Keep a short status line per step, so the user can see where the loop is.
