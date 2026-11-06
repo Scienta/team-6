@@ -65,3 +65,16 @@ CREATE TABLE IF NOT EXISTS workshop_registration (
     email   TEXT NOT NULL      -- as the attendee typed it
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_registration_email ON workshop_registration (talk_id, lower(email));
+
+-- 2026-11 programme scheduling: the venue's 15 fixed places (3 rooms x 5 slots), each empty or holding one talk.
+-- PUT locks the rows of a slot FOR UPDATE; a conditional write (talk_id IS NULL) and UNIQUE (talk_id) back up
+-- "one talk per place" and "a talk is on the programme once" (workflow/specs/scheduling.md).
+CREATE TABLE IF NOT EXISTS programme_entry (
+    room    TEXT NOT NULL,
+    slot    TEXT NOT NULL,
+    talk_id INTEGER UNIQUE,
+    PRIMARY KEY (room, slot)
+);
+INSERT INTO programme_entry (room, slot)
+SELECT r, s FROM unnest(ARRAY['R1', 'R2', 'R3']) AS r, unnest(ARRAY['S1', 'S2', 'S3', 'S4', 'S5']) AS s
+ON CONFLICT DO NOTHING;

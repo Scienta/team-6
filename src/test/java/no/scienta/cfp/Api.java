@@ -91,6 +91,20 @@ final class Api {
         }
     }
 
+    /** Sends a body with any Content-Type, e.g. to check that a non-JSON body is a 415. */
+    Res sendAs(String method, String path, String contentType, String body) {
+        HttpRequest r = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
+                .header("Content-Type", contentType)
+                .method(method, HttpRequest.BodyPublishers.ofString(body))
+                .build();
+        try {
+            HttpResponse<String> res = http.send(r, HttpResponse.BodyHandlers.ofString());
+            return new Res(res.statusCode(), res.body());
+        } catch (Exception e) {
+            throw new IllegalStateException(method + " " + path, e);
+        }
+    }
+
     Res get(String path) {
         return send("GET", path, null);
     }

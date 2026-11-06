@@ -44,14 +44,16 @@ public class ConferenceService {
     private final TalkDao talkDao;
     private final RatingDao ratingDao;
     private final CoSpeakerDao coSpeakerDao;
+    private final ProgrammeDao programmeDao;
     private final NotificationService notifications;
 
     public ConferenceService(SpeakerDao speakerDao, TalkDao talkDao, RatingDao ratingDao,
-                             CoSpeakerDao coSpeakerDao, NotificationService notifications) {
+                             CoSpeakerDao coSpeakerDao, ProgrammeDao programmeDao, NotificationService notifications) {
         this.speakerDao = speakerDao;
         this.talkDao = talkDao;
         this.ratingDao = ratingDao;
         this.coSpeakerDao = coSpeakerDao;
+        this.programmeDao = programmeDao;
         this.notifications = notifications;
     }
 
@@ -357,6 +359,98 @@ public class ConferenceService {
         talkDao.updateStatus(talkId, "WITHDRAWN");
         log.info("talk " + talkId + ": " + current + " -> WITHDRAWN");
         return getTalk(talkId);
+    }
+
+    // ---------------------------------------------------------------- scheduling
+
+    /**
+     * Puts an accepted talk in a room and slot (workflow/specs/scheduling.md). The slot's three places are locked
+     * first, then the talk, so concurrent PUTs into one slot (R6, R8) or of one talk (R7) run one after another and
+     * each sees the last one's result. Lock order is always slot, then talk. Putting a talk where it already is
+     * is a 409 (PO-?1).
+     */
+    @Transactional
+    public Map<String, Object> schedule(String room, String slot, Map<String, Object> body) {
+        requirePlace(room, slot);
+        Object value = body == null ? null : body.get("talkId");
+        boolean whole = value instanceof Integer || value instanceof Long || value instanceof java.math.BigInteger;
+        if (!whole || ((Number) value).doubleValue() < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "talkId must be a positive whole number");
+        }
+        // An unknown talk in the body is a 400, as an unknown speakerId in POST /talks (PO-?5); too big is unknown too.
+        if (value instanceof java.math.BigInteger) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "talk " + value + " does not exist");
+        }
+        long talkId = ((Number) value).longValue();
+
+        Map<String, Long> slotTalks = programmeDao.lockSlot(slot);
+        Map<String, Object> talk = talkDao.lockForUpdate(talkId);
+        if (talk == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "talk " + talkId + " does not exist");
+        }
+        Long here = slotTalks.get(room);
+        if (here != null && here == talkId) {
+            // PO-?1: 409, as a repeated acceptance decision (the harness failed acceptance check-3/check-5 on 200)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "the talk is already in " + room + " " + slot);
+        }
+        if (!"ACCEPTED".equals(talk.get("status"))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "only accepted talks go on the programme");
+        }
+        if ("WORKSHOP".equals(talk.get("format")) && !Programme.LONG_SLOT.equals(slot)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "a workshop needs the long slot " + Programme.LONG_SLOT);
+        }
+        if (here != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, room + " " + slot + " already has a talk");
+        }
+        if (programmeDao.isScheduled(talkId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "the talk is already on the programme; take it out first");
+        }
+        Set<Long> busy = programmeDao.speakersOf(new ArrayList<>(slotTalks.values()));
+        Set<Long> speakers = programmeDao.speakersOf(Collections.singletonList(talkId));
+        speakers.retainAll(busy);
+        if (!speakers.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "speaker " + speakers + " already speaks in " + slot);
+        }
+        // Backstops; the locks above make both unreachable: the place must still be empty (conditional write, R6),
+        // and UNIQUE (talk_id) keeps the talk on the programme once (R7).
+        int placed;
+        try {
+            placed = programmeDao.place(room, slot, talkId);
+        } catch (DuplicateKeyException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "the talk is already on the programme; take it out first");
+        }
+        if (placed == 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, room + " " + slot + " already has a talk");
+        }
+        log.info("programme " + room + " " + slot + ": talk " + talkId);
+        return Programme.entry(room, slot, talkId);
+    }
+
+    /** What's in a room and slot; an empty one is a 404 (PO-?2). */
+    public Map<String, Object> programmeEntry(String room, String slot) {
+        requirePlace(room, slot);
+        Long talkId = programmeDao.find(room, slot);
+        if (talkId == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, room + " " + slot + " is empty");
+        }
+        return Programme.entry(room, slot, talkId);
+    }
+
+    /** Takes the talk out of a room and slot; an empty one is a 404 (PO-?3). */
+    @Transactional
+    public void unschedule(String room, String slot) {
+        requirePlace(room, slot);
+        if (programmeDao.clear(room, slot) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, room + " " + slot + " is empty");
+        }
+        log.info("programme " + room + " " + slot + ": emptied");
+    }
+
+    /** Rooms and slots outside the fixed venue don't exist (PO-?4). */
+    private static void requirePlace(String room, String slot) {
+        if (!Programme.exists(room, slot)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "no room " + room + " / slot " + slot + " in the venue");
+        }
     }
 
     // ---------------------------------------------------------------- statistics

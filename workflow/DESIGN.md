@@ -42,6 +42,7 @@ spec, assume this document is stale until someone has reconciled it.
 | Acceptance | D1400–D1499 | `specs/acceptance.md` (Version 1) | `workflow/specs/acceptance.md` | released tick 20, unclaimed |
 | Workshop registration | D1500–D1599 | `specs/workshop-registration.md` (Version 1) | `workflow/specs/workshop-registration.md` | released tick 67, implemented (not yet shipped), unclaimed |
 | Platform / Spring Boot 4 | D1600–D1699 | `specs/spring-boot-4.md` (Version 1) | `workflow/specs/spring-boot-4.md` | released tick 40, claimed tick 98 |
+| Scheduling | D1800–D1899 | `specs/scheduling.md` (Version 1) | `workflow/specs/scheduling.md` | released tick 100, unclaimed |
 | Non-functional requirements | D1700–D1799 | `AGENTS.md` (deploy contract, platform), `specs/spring-boot-4.md` | ours | — |
 | Cross-cutting | D1900–D1999 | several | — | — |
 | Unspecified endpoints | D1950–D1969 | none — in the code only | — | — |
@@ -55,7 +56,9 @@ Speaker ──1──< Talk >──*── Rating        (reviewer is just a num
                  │
                  ├── status: SUBMITTED → ACCEPTED | REJECTED | WAITLISTED | WITHDRAWN
                  │
-                 └──< Registration       (only when format=WORKSHOP and status=ACCEPTED, max 20)
+                 ├──< Registration       (only when format=WORKSHOP and status=ACCEPTED, max 20)
+                 │
+                 └──0..1 Programme entry (room R1-R3 × slot S1-S5, 15 fixed places; only ACCEPTED)
 ```
 
 Dependency order, strict: **speakers → talks → ratings → acceptance → workshop-registration**.
@@ -294,12 +297,35 @@ instead of repeating these.
 | D1742 | Nothing ships without `workflow/scripts/verify.sh` green (`./mvnw package`, then every `examples/*.hurl` against a local service on Compose Postgres). |
 | D1743 | No secrets in the repo or in Actions; `.fagdag/harness-token` is never printed or committed. |
 
+## D1800–D1899 Scheduling
+
+Source: `specs/scheduling.md` (Version 1), decisions in `workflow/specs/scheduling.md` (R1–R10).
+Released tick 100. Open PO questions PO-?1..6 carry our defaults.
+
+| # | Rule |
+|---|---|
+| D1800 | Fixed venue: rooms `R1`–`R3`; slots `S1` 09:00–10:00, `S2` 10:15–11:15, `S3` 11:30–12:30, `S4` 13:30–15:30, `S5` 15:45–16:45, the same in every room. |
+| D1801 | `start`/`end` are `HH:mm`, 24-hour, zero-padded — string constants in `Programme.java` (D1702). |
+| D1802 | `PUT /programme/{room}/{slot}` `{talkId}` puts a talk in; `GET` shows it; `DELETE` takes it out; a talk taken out can go elsewhere. Entry = `{room, slot, start, end, talkId}`. |
+| D1803 | Only `ACCEPTED` talks. |
+| D1804 | A `WORKSHOP` only in `S4`; every other format fits anywhere. |
+| D1805 | One talk per room and slot; a talk on the programme only once (take it out to move it). |
+| D1806 | Main speakers and co-speakers of all talks in one slot are all different people (compared as they are now, PO-?6). |
+| D1807 | Rules are checked at PUT only; a talk changing later (withdrawn, co-speaker added) leaves the programme alone. |
+| D1808 | Concurrent PUTs never break D1803–D1806 (see D1901). |
+| D1850 | **[ours]** PUT ok → `200` Entry. Same talk into the place it already has → `409` unchanged (PO-?1, as D1450's repeat). Rule violations D1803–D1806 → `409`. |
+| D1851 | **[ours]** GET/DELETE of an empty place → `404` (PO-?2); DELETE ok → `204`, no body (PO-?3). |
+| D1852 | **[ours]** Room or slot outside the venue (incl. lower case) → `404`, any method (PO-?4). |
+| D1853 | **[ours]** `talkId` missing, null, not a whole number, or < 1 → `400`; no such talk (incl. too big for an id) → `400` (PO-?5, as an unknown `speakerId` in `POST /talks`). Malformed JSON → `400`, non-JSON → `415`. |
+| D1854 | **[ours]** Check order: place `404` → body `400` → unknown talk `400` → `409`s. Exception: an unreadable body (malformed, non-JSON) is `400`/`415` before the place check. |
+| D1855 | Concurrency: table `programme_entry` with the 15 places pre-inserted. PUT locks the slot's 3 rows `FOR UPDATE`, then the talk row; always in that order. Backstops: conditional write `talk_id IS NULL` (0 rows → `409`), `UNIQUE (talk_id)` (violation → `409`). Talk responses are unchanged (no programme fields). |
+
 ## D1900–D1999 Cross-cutting
 
 | # | Rule |
 |---|---|
 | D1900 | **Every response returning a Talk returns the complete Talk view** — all fields in the table above, from every feature. "Wherever a talk is shown" appears in ratings, co-speakers and acceptance; it means all eight endpoints listed there. |
-| D1901 | **Four specs independently demand correctness under concurrent writes:** D1105 (submission rush), D1207 (reviewers double-clicking), D1408 (committee racing), D1502 (registration rush). With a 5-connection pool and **no advisory locks**, the pattern is `SELECT … FOR UPDATE` on the contended row inside `@Transactional`, plus a database constraint as backstop. A constraint is the only unconditional proof; locks are only as good as the code around them. |
+| D1901 | **Five specs independently demand correctness under concurrent writes:** D1105 (submission rush), D1207 (reviewers double-clicking), D1408 (committee racing), D1502 (registration rush), D1808 (committee scheduling at once). With a 5-connection pool and **no advisory locks**, the pattern is `SELECT … FOR UPDATE` on the contended row inside `@Transactional`, plus a database constraint as backstop. A constraint is the only unconditional proof; locks are only as good as the code around them. |
 | D1902 | **Case-insensitive email, specified twice:** D1003 (speakers) and D1503 (attendees). Same comparison rule, separate tables, and both must return the original casing (D1004, D1504). |
 | D1903 | **Exact string formats are contractual** — D1150, D1151, D1250. Legacy clients parse them as plain strings. Never let a locale or JDK default decide them. |
 | D1904 | Error-code conventions, as settled in acceptance and co-speakers **[ours]**: `400` malformed input, `403` wrong actor, `404` unknown entity, `409` rule violation / illegal state, `415` wrong Content-Type. Validate body → entity exists → authorisation → state. |
@@ -331,8 +357,9 @@ harness check may exercise them, and the base features' checks pass today.
 | Co-speakers | `CoSpeakersTest` (10 concurrent PUTs → exactly 2) | `examples/co-speakers.hurl` |
 | Acceptance | `AcceptanceTest` (3×9 concurrent decisions; withdraw racing accept) | `examples/acceptance.hurl` |
 | Health | `HealthTest`, `HealthContractTest` | — |
+| Scheduling | `SchedulingTest` (one place × 12 talks, one talk × 15 places, 9-way speaker clash, PUT racing DELETE) | `examples/scheduling.hurl` |
 | Workshop registration | none yet | none yet |
 | Spring Boot 4 | `UpgradeContractTest` (P1–P4, P11, P12, P15–P20) | `examples/spring-boot-4.hurl` |
 
 Gate: `workflow/scripts/verify.sh` — `./mvnw package`, then every `examples/*.hurl` against a local
-service on Compose Postgres. All four concurrency rules in D1901 now have a test.
+service on Compose Postgres. D1901's concurrency rules for implemented features all have a test.
