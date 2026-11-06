@@ -12,7 +12,7 @@ for the user's answer:
 1. `/sync-specs`. If no slug was given, pick the released, unclaimed feature (or FAULTY check) that's
    worth the most, and say why.
 2. `/plan-feature <slug>`. **Checkpoint:** the user approves the plan and answers or parks the PO?
-   questions.
+   questions; record answers with `/po-answers <slug>`.
 3. `/implement-feature <slug>`.
 4. `/verify-feature <slug>`. If there are gaps, go back to 3 (at most twice, then ask).
 5. **Checkpoint:** the user says ship. Then `/ship <slug>`.

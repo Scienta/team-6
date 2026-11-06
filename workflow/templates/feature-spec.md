@@ -23,6 +23,17 @@ unknown resource in the path, 409 for a business-rule conflict, 200 for idempote
 | repeated request (double-click) | ... |
 | rule violation | `409` |
 
+## Product owner answers
+
+Every **PO?** above becomes a row here once a person has asked. The decision tables above are
+updated to match, and the **PO?** mark is removed. Each answer gets its own test, named after it
+and tagged with a `// PO-n` comment, so the decision is documented in code and can't silently
+regress.
+
+| # | Question | Answer | Asked (tick) | Test |
+|---|---|---|---|---|
+| PO-1 | ... | ... | ... | `...Test#...`, `examples/<slug>.hurl` "# PO-1" |
+
 ## Effects on existing endpoints
 
 Which existing responses gain or change fields, and which must stay unchanged.

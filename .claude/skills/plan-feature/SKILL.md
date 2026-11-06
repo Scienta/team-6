@@ -22,6 +22,7 @@ Input: a slug. If `specs/<slug>.md` is missing or may be stale, run `/sync-specs
 4. **Plan.** Write `workflow/plans/<slug>.md` from `workflow/templates/plan.md`: file-by-file
    changes, a test per rule/decision (JUnit in `src/test/java/no/scienta/cfp/`, Hurl in
    `examples/<slug>.hurl`), risks to existing features, and done-when.
-5. **Stop.** Show the user the rule table, the decisions, the PO? questions and the plan summary,
+5. **Stop.** List the PO? questions numbered, with our default answer, so the user can reply
+   "1: …, 2: …". Record their answers with `/po-answers`. Show the user the rule table, the decisions, the PO? questions and the plan summary,
    and ask for approval before `/implement-feature`. Set the plan's status to `approved` only when
    they say so.

@@ -1,22 +1,24 @@
 package no.scienta.cfp;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Speakers, talks and ratings.
@@ -258,13 +260,89 @@ public class ConferenceService {
         return getTalk(talkId);
     }
 
-    /** Removes a co-speaker. Removing someone who isn't one changes nothing. */
+    /** Removes a co-speaker. Removing someone who isn't one is a 404 and changes nothing (co-speakers PO-1). */
     @Transactional
     public TalkDto removeCoSpeaker(long talkId, long speakerId) {
         if (coSpeakerDao.lockTalk(talkId) == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "talk not found");
         }
-        coSpeakerDao.remove(talkId, speakerId);
+        if (coSpeakerDao.remove(talkId, speakerId) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "speaker " + speakerId + " is not a co-speaker of this talk");
+        }
+        return getTalk(talkId);
+    }
+
+    // ---------------------------------------------------------------- acceptance
+
+    private static final Set<String> DECISIONS = set("ACCEPTED", "REJECTED", "WAITLISTED");
+
+    /** The committee's decisions allowed from each status (workflow/specs/acceptance.md). */
+    private static final Map<String, Set<String>> ALLOWED_DECISIONS = new HashMap<>();
+
+    /** The statuses a speaker can withdraw from. */
+    private static final Set<String> WITHDRAWABLE = set("SUBMITTED", "WAITLISTED", "ACCEPTED");
+
+    static {
+        ALLOWED_DECISIONS.put("SUBMITTED", DECISIONS);
+        ALLOWED_DECISIONS.put("WAITLISTED", set("ACCEPTED", "REJECTED"));
+    }
+
+    private static Set<String> set(String... values) {
+        return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(values)));
+    }
+
+    /**
+     * The committee decides on a talk. The talk row is locked first, so concurrent decisions run one after another
+     * and each sees the last one's result. Repeating the decision the talk already has changes nothing (PO-1).
+     */
+    @Transactional
+    public TalkDto decide(long talkId, Map<String, Object> body) {
+        Object value = body == null ? null : body.get("status");
+        if (!(value instanceof String) || !DECISIONS.contains(value)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status must be one of " + DECISIONS);
+        }
+        String decision = (String) value;
+        Map<String, Object> talk = talkDao.lockForUpdate(talkId);
+        if (talk == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "talk not found");
+        }
+        String current = (String) talk.get("status");
+        if (current.equals(decision)) {
+            return getTalk(talkId);
+        }
+        if (!ALLOWED_DECISIONS.getOrDefault(current, Collections.emptySet()).contains(decision)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "a " + current + " talk can't be " + decision);
+        }
+        if (decision.equals("ACCEPTED") && ratingDao.reviewerCount(talkId) < 2) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "a talk needs ratings from at least 2 reviewers to be accepted");
+        }
+        talkDao.updateStatus(talkId, decision);
+        log.info("talk " + talkId + ": " + current + " -> " + decision);
+        return getTalk(talkId);
+    }
+
+    /** The talk's own speaker withdraws it, unless it is rejected or already withdrawn. */
+    @Transactional
+    public TalkDto withdraw(long talkId, Map<String, Object> body) {
+        Object value = body == null ? null : body.get("speakerId");
+        boolean whole = value instanceof Integer || value instanceof Long || value instanceof java.math.BigInteger;
+        if (!whole || ((Number) value).doubleValue() < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "speakerId must be a positive whole number");
+        }
+        Map<String, Object> talk = talkDao.lockForUpdate(talkId);
+        if (talk == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "talk not found");
+        }
+        // A number too big for a speaker id is nobody's id: someone else (PO-3), not a bad request.
+        if (value instanceof java.math.BigInteger || ((Number) talk.get("speaker_id")).longValue() != ((Number) value).longValue()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "only the talk's speaker can withdraw it");
+        }
+        String current = (String) talk.get("status");
+        if (!WITHDRAWABLE.contains(current)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "a " + current + " talk can't be withdrawn");
+        }
+        talkDao.updateStatus(talkId, "WITHDRAWN");
+        log.info("talk " + talkId + ": " + current + " -> WITHDRAWN");
         return getTalk(talkId);
     }
 

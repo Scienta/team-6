@@ -2,6 +2,7 @@ package no.scienta.cfp;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -53,7 +54,21 @@ public class TalkDao {
     }
 
     /**
-     * Inserts the talk only if the speaker has fewer than {@code max} talks. Returns the new id, or null.
+     * Locks the talk row until the transaction ends, so concurrent status changes run one at a time.
+     * Returns {status, speaker_id}, or null when there is no such talk.
+     */
+    public Map<String, Object> lockForUpdate(long id) {
+        List<Map<String, Object>> rows = jdbc.queryForList("SELECT status, speaker_id FROM talk WHERE id = ? FOR UPDATE", id);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    public void updateStatus(long id, String status) {
+        jdbc.update("UPDATE talk SET status = ? WHERE id = ?", status, id);
+    }
+
+    /**
+     * Inserts the talk only if the speaker has fewer than {@code max} talks that count: withdrawn and rejected talks
+     * don't (acceptance PO-2). Returns the new id, or null.
      * The speaker row is locked first so two submissions for the same speaker can't both see room under the limit.
      */
     @Transactional
@@ -62,7 +77,8 @@ public class TalkDao {
         List<Long> ids = jdbc.queryForList(
                 "INSERT INTO talk (title, format, duration, level, status, speaker_id, submitted_at) "
                         + "SELECT ?, ?, ?, ?, 'SUBMITTED', ?, ? "
-                        + "WHERE (SELECT COUNT(*) FROM talk WHERE speaker_id = ?) < ? RETURNING id",
+                        + "WHERE (SELECT COUNT(*) FROM talk WHERE speaker_id = ? AND status NOT IN ('WITHDRAWN', 'REJECTED')) < ? "
+                        + "RETURNING id",
                 Long.class, title, format, duration, level, speakerId, submittedAt, speakerId, max);
         return ids.isEmpty() ? null : ids.get(0);
     }

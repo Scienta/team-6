@@ -27,11 +27,20 @@ owner are marked **PO?**.
 | PUT, speaker is the main speaker (R3) | `409` |
 | PUT, talk already has 2 other co-speakers (R2) | `409` |
 | `DELETE /talks/{id}/co-speakers/{speakerId}`, OK | `200`, the full Talk |
-| DELETE, speaker isn't a co-speaker | `200`, talk unchanged (idempotent, so double-clicks are safe). **PO?** (could be 404) |
+| DELETE, speaker isn't a co-speaker (incl. an unknown speaker) | `404`, talk unchanged (PO-1) |
 | DELETE, talk doesn't exist | `404` |
 | Non-numeric id in the path | `400` (Spring's type mismatch) |
 | Removed, then added again | Goes to the end of the order. |
 | `coSpeakerIds` everywhere a Talk is shown | POST /talks, GET /talks/{id}, GET /talks (all variants), GET /speakers/{id}/talks |
+
+## Product owner answers
+
+| # | Question | Answer | Asked (tick) | Test |
+|---|---|---|---|---|
+| PO-1 | DELETE of a speaker who isn't a co-speaker of the talk: 200 or 404? | `404`, talk unchanged | 38 | `CoSpeakersTest#removingANonCoSpeakerIs404`, `examples/co-speakers.hurl` "# PO-1" |
+
+Note: [acceptance PO-2](acceptance.md#product-owner-answers) changes the 3-talk limit (withdrawn
+and rejected talks don't count). R7 still holds: co-speaking never counts.
 
 ## Concurrency
 

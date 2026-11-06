@@ -1,7 +1,7 @@
 # Team workflow rules
 
 - Our process is `workflow/PROCESS.md`. The skills in `.claude/skills/` run its steps:
-  `/feature` (the whole loop), `/sync-specs`, `/plan-feature`, `/implement-feature`,
+  `/feature` (the whole loop), `/sync-specs`, `/plan-feature`, `/po-answers`, `/implement-feature`,
   `/verify-feature`, `/ship`, `/feature-status`, `/triage-check`.
 - Talk to the harness with `workflow/scripts/harness.sh` (rate-limited; reads the token itself).
   Never print, echo or commit `.fagdag/harness-token`.

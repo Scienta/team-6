@@ -113,8 +113,11 @@ HTTP 200
 jsonpath "$.coSpeakerIds" count == 1
 jsonpath "$.coSpeakerIds[0]" == {{co1_id}}
 
-# Removing someone who isn't a co-speaker changes nothing
+# PO-1: removing someone who isn't a co-speaker is a 404 and changes nothing
 DELETE {{base_url}}/talks/{{talk_id}}/co-speakers/{{co2_id}}
+HTTP 404
+
+GET {{base_url}}/talks/{{talk_id}}
 HTTP 200
 [Asserts]
 jsonpath "$.coSpeakerIds" count == 1

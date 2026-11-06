@@ -32,6 +32,19 @@ Hurl example against a local service). Templates for our spec decisions and plan
 <!-- Who or what reviewed the agents' work (people, review agents, tests, Hurl examples, gates in
 the deploy workflow), and against what (the spec, its examples, your own checks). -->
 
+- **Tests first, against our spec.** Every rule (R1..Rn) and every product owner answer (PO-n) in
+  `workflow/specs/<slug>.md` has a JUnit test named after it and a Hurl entry. The new tests had to
+  fail before the change (acceptance: 13 red → green; co-speakers PO-1: red → green).
+- **Product owner answers are code.** Tick 38: acceptance PO-1 (the same decision again is a 200),
+  PO-2 (withdrawn and rejected talks don't count towards the 3-talk limit, which changes the talks
+  feature), PO-3 (an unregistered speaker withdrawing gets 403), and co-speakers PO-1 (DELETE of a
+  non-co-speaker is a 404). They're recorded in each spec's "Product owner answers" table and tested
+  in `AcceptanceTest` / `CoSpeakersTest` (`// PO-n`) and `examples/*.hurl` (`# PO-n`).
+- **Gate:** `workflow/scripts/verify.sh` (all tests plus every Hurl file against a local service on
+  a production-like JDK) before every push.
+- **Independent review agent** per feature (`/verify-feature`), given the specs and the diff but
+  not our conclusions. It reports rule → implementation → test, plus races and regressions.
+
 ## 3. Claim log
 
 <!-- A running entry per feature or change request, written when you claim or decide to skip it:

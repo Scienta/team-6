@@ -8,12 +8,14 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,6 +41,111 @@ class CoSpeakersTest {
     int port;
 
     private final HttpClient http = HttpClient.newHttpClient();
+
+    Api api;
+
+    @BeforeEach
+    void setUp() {
+        api = new Api(port);
+    }
+
+    private Api.Res put(long talk, long speaker) {
+        return api.send("PUT", "/talks/" + talk + "/co-speakers/" + speaker, null);
+    }
+
+    private Api.Res delete(long talk, long speaker) {
+        return api.send("DELETE", "/talks/" + talk + "/co-speakers/" + speaker, null);
+    }
+
+    @Test
+    void coSpeakersShowInTheOrderAdded() {
+        long talk = api.talk(api.speaker());
+        long a = api.speaker();
+        long b = api.speaker();
+        assertEquals(Arrays.asList(), api.coSpeakers(talk), "R4: [] when none");
+        assertEquals(200, put(talk, b).status);
+        Api.Res res = put(talk, a);
+        assertEquals(200, res.status, res.toString());
+        assertEquals(b, res.json.get("coSpeakerIds").get(0).asLong(), "R4: the PUT answers with the full Talk");
+        assertEquals(Arrays.asList(b, a), api.coSpeakers(talk));
+        assertEquals(200, delete(talk, b).status);
+        assertEquals(Arrays.asList(a), api.coSpeakers(talk));
+        assertEquals(200, put(talk, b).status);
+        assertEquals(Arrays.asList(a, b), api.coSpeakers(talk), "removed and added again goes last");
+    }
+
+    @Test
+    void mainSpeakerCannotCoSpeak() {
+        long main = api.speaker();
+        long talk = api.talk(main);
+        assertEquals(409, put(talk, main).status);
+        assertEquals(Arrays.asList(), api.coSpeakers(talk));
+    }
+
+    @Test
+    void atMostTwoCoSpeakers() {
+        long talk = api.talk(api.speaker());
+        long a = api.speaker();
+        long b = api.speaker();
+        put(talk, a);
+        put(talk, b);
+        assertEquals(409, put(talk, api.speaker()).status);
+        assertEquals(200, put(talk, a).status, "R5: re-adding one of the two is still fine");
+        assertEquals(Arrays.asList(a, b), api.coSpeakers(talk));
+    }
+
+    @Test
+    void unknownTalkOrSpeakerIs404() {
+        long talk = api.talk(api.speaker());
+        long other = api.speaker();
+        assertEquals(404, put(999_999, other).status);
+        assertEquals(404, put(talk, 999_999).status);
+        assertEquals(404, delete(999_999, other).status);
+        assertEquals(400, api.send("PUT", "/talks/abc/co-speakers/" + other, null).status);
+    }
+
+    // PO-1: removing someone who isn't a co-speaker of the talk is a 404, and changes nothing
+    @Test
+    void removingANonCoSpeakerIs404() {
+        long talk = api.talk(api.speaker());
+        long a = api.speaker();
+        long notOne = api.speaker();
+        put(talk, a);
+        assertEquals(404, delete(talk, notOne).status);
+        assertEquals(404, delete(talk, 999_999).status, "an unknown speaker isn't a co-speaker either");
+        assertEquals(200, delete(talk, a).status);
+        assertEquals(404, delete(talk, a).status, "a second remove finds nothing to remove");
+        assertEquals(Arrays.asList(), api.coSpeakers(talk));
+    }
+
+    @Test
+    void ownTalkListShowsOnlyMainSpeakerTalks() {
+        long main = api.speaker();
+        long co = api.speaker();
+        long talk = api.talk(main);
+        long own = api.talk(co);
+        put(talk, co);
+        Api.Res list = api.get("/speakers/" + co + "/talks");
+        assertEquals(1, list.json.size());
+        assertEquals(own, list.json.get(0).get("id").asLong());
+        Api.Res filtered = api.get("/talks?speakerId=" + co);
+        assertEquals(1, filtered.json.size());
+        assertEquals(own, filtered.json.get(0).get("id").asLong());
+    }
+
+    @Test
+    void coSpeakingDoesNotCountTowardsTheLimit() {
+        long co = api.speaker();
+        long a = api.talk(api.speaker());
+        long b = api.talk(api.speaker());
+        put(a, co);
+        put(b, co);
+        api.talk(co);
+        api.talk(co);
+        api.talk(co); // 3 own talks while co-speaking on 2 others
+        assertEquals(409, api.submit(co).status);
+        assertEquals(200, put(api.talk(api.speaker()), co).status, "at the limit, still can co-speak");
+    }
 
     @Test
     void concurrentAddsNeverExceedTwoCoSpeakers() throws Exception {

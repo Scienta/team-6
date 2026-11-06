@@ -15,6 +15,7 @@ checkpoint.
 |---|---|---|---|---|
 | 1 | **Sync**: what's released or changed? | `/sync-specs` | `specs/<slug>.md` (organisers' copy), `specs/<slug>.diff` when changed | - |
 | 2 | **Spec**: rules + our decisions (status codes, edge cases, concurrency) | `/plan-feature` | `workflow/specs/<slug>.md` from [templates/feature-spec.md](templates/feature-spec.md) | open **PO?** questions go to a person |
+| 2b | **PO answers**: a person asks the product owner; the answers are recorded | `/po-answers <slug> <answers>` | "Product owner answers" table in `workflow/specs/<slug>.md`, decision tables updated, plan's test table gains a `PO-n` row | every answer has a test tagged `// PO-n` |
 | 3 | **Plan**: files to touch, tests to write, in order | `/plan-feature` | `workflow/plans/<slug>.md` from [templates/plan.md](templates/plan.md) | **human approves the plan** |
 | 4 | **Implement**: tests first (JUnit + Hurl), then code | `/implement-feature` | code, `src/test/.../<Feature>Test.java`, `examples/<slug>.hurl` | tests red before, green after |
 | 5 | **Verify**: the full gate | `/verify-feature` | `workflow/scripts/verify.sh` output; spec-vs-code review | every rule has a test; script passes |
@@ -38,5 +39,10 @@ checkpoint.
 - `specs/` is the organisers' text, untouched. `workflow/specs/` is ours: the decisions.
 - Rule ids `R1..Rn` in our spec are reused in test names, Hurl comments and the plan, so a reviewer
   can trace every rule to a test.
+- Product owner answers are numbered `PO-1..n` per feature. The answer, the tick it was asked and
+  the test that documents it go in the spec's "Product owner answers" table. The test carries a
+  `// PO-n` comment and the Hurl entry a `# PO-n` comment. An answer can change an existing
+  feature (e.g. which talks count towards a limit): that feature's spec gets a pointer to the
+  answer, and its tests are re-run.
 - A change request (a spec whose `Version:` goes up) goes through the same loop. The plan starts
   from `specs/<slug>.diff`.
