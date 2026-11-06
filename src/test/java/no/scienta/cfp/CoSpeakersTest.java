@@ -145,17 +145,16 @@ class CoSpeakersTest {
     }
 
     @Test
-    void coSpeakingDoesNotCountTowardsTheLimit() {
+    // submission-cap-cr replaced co-speakers R7 ("co-speaking doesn't count"); the full rules are in SubmissionCapTest
+    void coSpeakingCountsTowardsTheLimit() {
         long co = api.speaker();
         long a = api.talk(api.speaker());
         long b = api.talk(api.speaker());
         put(a, co);
         put(b, co);
-        api.talk(co);
-        api.talk(co);
-        api.talk(co); // 3 own talks while co-speaking on 2 others
+        assertEquals(201, api.submit(co).status, "co-speaking on 2 talks leaves room for 1 own");
         assertEquals(409, api.submit(co).status);
-        assertEquals(200, put(api.talk(api.speaker()), co).status, "at the limit, still can co-speak");
+        assertEquals(409, put(api.talk(api.speaker()), co).status, "at the limit, can't co-speak on a talk in the running");
     }
 
     @Test

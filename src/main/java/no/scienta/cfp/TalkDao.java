@@ -73,14 +73,33 @@ public class TalkDao {
      */
     @Transactional
     public Long insertIfBelow(int max, String title, String format, int duration, String level, long speakerId, long submittedAt) {
-        jdbc.queryForList("SELECT id FROM speaker WHERE id = ? FOR UPDATE", speakerId);
+        lockSpeaker(speakerId);
         List<Long> ids = jdbc.queryForList(
                 "INSERT INTO talk (title, format, duration, level, status, speaker_id, submitted_at) "
                         + "SELECT ?, ?, ?, ?, 'SUBMITTED', ?, ? "
-                        + "WHERE (SELECT COUNT(*) FROM talk WHERE speaker_id = ? AND status NOT IN ('WITHDRAWN', 'REJECTED')) < ? "
+                        + "WHERE (" + COUNTING + ") < ? "
                         + "RETURNING id",
-                Long.class, title, format, duration, level, speakerId, submittedAt, speakerId, max);
+                Long.class, title, format, duration, level, speakerId, submittedAt, speakerId, speakerId, max);
         return ids.isEmpty() ? null : ids.get(0);
+    }
+
+    /**
+     * The talks that count towards a speaker's limit (submission-cap-cr, DESIGN.md D1105, D1106): talks not rejected
+     * or withdrawn where they are the main speaker or a co-speaker. Parameters: speaker id, speaker id.
+     */
+    private static final String COUNTING = "SELECT COUNT(*) FROM talk WHERE status NOT IN ('WITHDRAWN', 'REJECTED') "
+            + "AND (speaker_id = ? OR id IN (SELECT talk_id FROM talk_co_speaker WHERE speaker_id = ?))";
+
+    public int countingTalks(long speakerId) {
+        return jdbc.queryForObject(COUNTING, Integer.class, speakerId, speakerId);
+    }
+
+    /**
+     * Locks the speaker's row until the transaction ends. Everything that adds to a speaker's count takes this lock
+     * (submissions, co-speaker PUTs, D1354), so the limit holds when they race. Lock order: talk row, then speaker.
+     */
+    public void lockSpeaker(long speakerId) {
+        jdbc.queryForList("SELECT id FROM speaker WHERE id = ? FOR UPDATE", speakerId);
     }
 
     // old version, raced when the mobile app double-posted

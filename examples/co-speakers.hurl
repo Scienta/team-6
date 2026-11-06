@@ -136,7 +136,7 @@ HTTP 200
 jsonpath "$.coSpeakerIds[0]" == {{co1_id}}
 jsonpath "$.coSpeakerIds[1]" == {{co3_id}}
 
-# R7: co1 co-speaks, and can still submit 3 talks of their own; a 4th is refused
+# submission-cap-cr (replaces co-speakers R7): co1 co-speaks on one talk, so only 2 talks of their own fit
 POST {{base_url}}/talks
 { "title": "Own 1", "format": "LIGHTNING_10", "level": "BEGINNER", "speakerId": {{co1_id}} }
 HTTP 201
@@ -147,13 +147,9 @@ HTTP 201
 
 POST {{base_url}}/talks
 { "title": "Own 3", "format": "LIGHTNING_10", "level": "BEGINNER", "speakerId": {{co1_id}} }
-HTTP 201
-
-POST {{base_url}}/talks
-{ "title": "Own 4", "format": "LIGHTNING_10", "level": "BEGINNER", "speakerId": {{co1_id}} }
 HTTP 409
 
-# R7: a speaker at the limit can still co-speak on another talk
+# submission-cap-cr PO-1: at the limit, co1 can't co-speak on another talk in the running
 POST {{base_url}}/talks
 { "title": "Another", "format": "WORKSHOP", "level": "ADVANCED", "speakerId": {{main_id}} }
 HTTP 201
@@ -161,6 +157,4 @@ HTTP 201
 talk2_id: jsonpath "$.id"
 
 PUT {{base_url}}/talks/{{talk2_id}}/co-speakers/{{co1_id}}
-HTTP 200
-[Asserts]
-jsonpath "$.coSpeakerIds[0]" == {{co1_id}}
+HTTP 409

@@ -5,8 +5,7 @@ limit of [Talk submissions](../../specs/talks.md) and replaces co-speakers R7 ("
 count"). In `DESIGN.md` it changes D1105, D1106, D1306 and D1350 in place. Open questions are
 marked **PO?**.
 
-Status: rules and PO answers recorded (tick 188). Decisions not covered by an answer, and the plan,
-are for `/plan-feature submission-cap-cr`.
+Status: rules and PO answers recorded (tick 188); plan in `workflow/plans/submission-cap-cr.md` (tick 190).
 
 ## Rules (from the change request)
 
@@ -29,7 +28,7 @@ are for `/plan-feature submission-cap-cr`.
 | same, but the talk is `REJECTED` or `WITHDRAWN` | `200`: it doesn't count (R3) |
 | same, but they are already a co-speaker of this talk | `200`, nothing changes, also at or over the limit (PO-2) |
 | same, but they are the talk's main speaker | `400`, as co-speakers PO-2; the main-speaker check wins over the limit (PO-3) |
-| check order on the co-speaker `PUT` | `404` talk/speaker → `400` main speaker → `200` already a co-speaker → `409` talk has 2 co-speakers → `409` co-speaker at the limit. **To confirm in `/plan-feature`:** the relative order of the two `409`s isn't observable except in the message. |
+| check order on the co-speaker `PUT` | `404` talk/speaker → `400` main speaker → `200` already a co-speaker → `409` talk has 2 co-speakers → `409` co-speaker at the limit. **Decided [ours] in `/plan-feature`:** "2 co-speakers" first, since it needs no second lock; the two `409`s differ only in the message. |
 | speaker over the new limit, added to a rejected or withdrawn talk | `200`, allowed: those talks don't count (R3, PO-5) |
 | speaker over the limit, `DELETE` as co-speaker | allowed as today; it frees a place (R2) |
 
@@ -37,11 +36,11 @@ are for `/plan-feature submission-cap-cr`.
 
 | # | Question | Answer | Asked (tick) | Test |
 |---|---|---|---|---|
-| PO-1 | Adding a co-speaker who is at the cap: what answer? | `409`, nothing changes | 188 | pending (`/implement-feature`) |
-| PO-2 | Re-adding an existing co-speaker who is at or over the cap: still a no-op? | `200`, nothing changes | 188 | pending |
-| PO-3 | Adding the talk's main speaker as co-speaker when they're at the cap: `400` or `409`? | `400`: the main-speaker check wins | 188 | pending |
-| PO-4 | Do `WAITLISTED` talks count towards the cap? | yes | 188 | pending |
-| PO-5 | Can a speaker already over the cap be added as co-speaker to a `REJECTED` or `WITHDRAWN` talk? | yes, allowed (our default, accepted) | 192 | pending |
+| PO-1 | Adding a co-speaker who is at the cap: what answer? | `409`, nothing changes | 188 | `SubmissionCapTest#atTheLimitCannotBeAddedAsCoSpeaker`, hurl |
+| PO-2 | Re-adding an existing co-speaker who is at or over the cap: still a no-op? | `200`, nothing changes | 188 | `SubmissionCapTest#reAddingAnExistingCoSpeakerIsANoOpAtTheLimit`, hurl |
+| PO-3 | Adding the talk's main speaker as co-speaker when they're at the cap: `400` or `409`? | `400`: the main-speaker check wins | 188 | `SubmissionCapTest#mainSpeakerCheckWinsOverTheLimit`, hurl |
+| PO-4 | Do `WAITLISTED` talks count towards the cap? | yes | 188 | `SubmissionCapTest#waitlistedAndAcceptedCount` |
+| PO-5 | Can a speaker already over the cap be added as co-speaker to a `REJECTED` or `WITHDRAWN` talk? | yes, allowed (our default, accepted) | 192 | `SubmissionCapTest#overTheLimitKeepsEverythingButGetsNothingNew` |
 
 
 ## Effects on existing endpoints

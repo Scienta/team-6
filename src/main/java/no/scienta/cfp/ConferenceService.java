@@ -258,10 +258,11 @@ public class ConferenceService {
      */
     @Transactional
     public TalkDto addCoSpeaker(long talkId, long speakerId) {
-        Long mainSpeaker = coSpeakerDao.lockTalk(talkId);
-        if (mainSpeaker == null) {
+        Map<String, Object> talk = talkDao.lockForUpdate(talkId);
+        if (talk == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "talk not found");
         }
+        long mainSpeaker = ((Number) talk.get("speaker_id")).longValue();
         if (!speakerDao.exists(speakerId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "speaker not found");
         }
@@ -273,6 +274,15 @@ public class ConferenceService {
         if (!current.contains(speakerId)) {
             if (current.size() >= 2) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "a talk has at most 2 co-speakers");
+            }
+            // submission-cap-cr: co-speaking on a talk in the running counts towards the speaker's 3 talks (PO-1);
+            // a rejected or withdrawn talk doesn't count (R3, PO-5). The speaker row is locked after the talk row
+            // (D1354), so this and a submission for the same speaker can't both take the last place.
+            if (!TERMINAL.contains((String) talk.get("status"))) {
+                talkDao.lockSpeaker(speakerId);
+                if (talkDao.countingTalks(speakerId) >= 3) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "a speaker can be on at most 3 talks");
+                }
             }
             coSpeakerDao.add(talkId, speakerId);
         }
@@ -297,6 +307,9 @@ public class ConferenceService {
 
     /** The committee's decisions allowed from each status (workflow/specs/acceptance.md). */
     private static final Map<String, Set<String>> ALLOWED_DECISIONS = new HashMap<>();
+
+    /** Rejected and withdrawn talks: final, and outside every speaker's limit (D1106). */
+    private static final Set<String> TERMINAL = set("REJECTED", "WITHDRAWN");
 
     /** The statuses a speaker can withdraw from. */
     private static final Set<String> WITHDRAWABLE = set("SUBMITTED", "WAITLISTED", "ACCEPTED");

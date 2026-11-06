@@ -37,7 +37,7 @@ spec, assume this document is stale until someone has reconciled it.
 | Area | Rules | Feature request | Our decisions | Status |
 |---|---|---|---|---|
 | Speakers | D1000–D1099 | `specs/speakers.md` (Version 1) | — | base, claimed |
-| Talks | D1100–D1199 | `specs/talks.md` (Version 1) + change request `specs/submission-cap-cr.md` (Version 1, released tick 180) | `workflow/specs/submission-cap-cr.md` (rules + PO-1..5) | base, claimed; change request unclaimed, not implemented, D1105/D1106 changed in place |
+| Talks | D1100–D1199 | `specs/talks.md` (Version 1) + change request `specs/submission-cap-cr.md` (Version 1, released tick 180) | `workflow/specs/submission-cap-cr.md` (rules + PO-1..5) | base, claimed; change request implemented (not yet shipped), unclaimed, D1105/D1106 changed in place |
 | Ratings | D1200–D1299 | `specs/ratings.md` (Version 1) + change request `specs/ratings-cr.md` (Version 1, released tick 167) | `workflow/specs/ratings-cr.md` | base, claimed; change request implemented (not yet shipped), unclaimed; D1204/D1206 changed in place |
 | Co-speakers | D1300–D1399 | `specs/co-speakers.md` (Version 1) | `workflow/specs/co-speakers.md` | released tick 0, claimed tick 70; D1306 replaced and D1350 extended by submission-cap-cr |
 | Acceptance | D1400–D1499 | `specs/acceptance.md` (Version 1) | `workflow/specs/acceptance.md` | released tick 20, claimed tick 107 |
@@ -161,7 +161,7 @@ Released tick 0, **claimed tick 70**.
 | D1351 | **[ours]** DELETE ok → `200` + full Talk. Not a co-speaker, incl. unknown speaker → `404` unchanged (PO-1). Talk unknown → `404`. |
 | D1352 | **[ours]** Non-numeric path id → `400` (Spring type mismatch). |
 | D1353 | Concurrency: PUT locks the talk row `FOR UPDATE`, then counts and inserts in one transaction. Unique `(talk_id, speaker_id)` with `ON CONFLICT DO NOTHING` covers D1304 under double-clicks. |
-| D1354 | **[submission-cap-cr R4, ours — not implemented]** The co-speaker PUT must also lock the **co-speaker's speaker row** `FOR UPDATE` before counting, always talk row → speaker row. Today a submission (speaker-row lock, D1105) and an invitation (talk-row lock, D1353) for the same speaker don't block each other, so both can take the last place. No cycle: submissions lock only the speaker row; decisions and withdrawals lock only the talk row and can only free places. No constraint can span the count; the lock is the argument. |
+| D1354 | **[submission-cap-cr R4, ours]** The co-speaker PUT must also lock the **co-speaker's speaker row** `FOR UPDATE` before counting, always talk row → speaker row. Today a submission (speaker-row lock, D1105) and an invitation (talk-row lock, D1353) for the same speaker don't block each other, so both can take the last place. No cycle: submissions lock only the speaker row; decisions and withdrawals lock only the talk row and can only free places. No constraint can span the count; the lock is the argument. |
 
 ## D1400–D1499 Acceptance
 
@@ -410,7 +410,7 @@ implemented, unclaimed. Rules D2000–D2012 are from the feature request; D2050�
 | Talks | `TalksTest` (incl. concurrent 3-talk limit) | `examples/talks.hurl` |
 | Ratings | `RatingsTest` (incl. many reviewers at once, double-click), `ConferenceServiceTest` | `examples/ratings.hurl` |
 | Ratings change request | `RatingsCrTest` (spec's ties 25/8 → 3.12, 27/8 → 3.38, trim at 5, raw `4.00`); old-rounding pins updated in `RatingsTest`, `FormatsTest`, `UpgradeContractTest`, `AdminReportsTest` | `examples/ratings-cr.hurl`; `spring-boot-4.hurl` updated |
-| Submission cap change request | planned: tests per rule and PO-1..5, a concurrent test mixing submissions and co-speaker PUTs for one speaker; `CoSpeakersTest`'s old "limit doesn't apply" test updated | planned: `examples/submission-cap-cr.hurl`; `co-speakers.hurl` updated |
+| Submission cap change request | `SubmissionCapTest` (R1–R6, PO-1..5; two rush tests: submissions + invitations, and invitations on different talks, for one speaker's last place); `CoSpeakersTest#coSpeakingCountsTowardsTheLimit` reversed | `examples/submission-cap-cr.hurl`; `co-speakers.hurl` R7 section reversed |
 | Formats | `FormatsTest`, `UtilsTest` (byte-exact `ratedAtDisplay`) | — |
 | Admin reports | `AdminReportsTest` | — |
 | Co-speakers | `CoSpeakersTest` (10 concurrent PUTs → exactly 2) | `examples/co-speakers.hurl` |
