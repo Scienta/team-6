@@ -213,7 +213,7 @@ Source: `specs/workshop-registration.md` (Version 1), decisions in
 | D1508 | `Registration` = `{ id, workshopId, name, email }`. |
 | D1550 | **[ours]** `POST` new → `201` + Registration. `name`/`email` missing, null, not a string or blank → `400`. Body not a JSON object / no body → `400`. |
 | D1551 | **[PO-4]** The email must look like an email: one `@`, no whitespace (Unicode too) or control characters, a domain of ≥2 non-empty dot-separated labels → else `400`. Not trimmed: `" ada@example.com "` → `400`. |
-| D1552 | **[ours/PO-1]** Unknown talk id → `404` (POST and GET). A talk that isn't a `WORKSHOP`: `POST` → `409` (PO-1 `400` was FAULTY on `workshop-registration/check-2`, ticks 124–126), `GET` → `400` (unverified). |
+| D1552 | **[ours/PO-1]** Unknown talk id → `404` (POST and GET). A talk that isn't a `WORKSHOP`: `POST` → `409` (PO-1 `400` was FAULTY on `workshop-registration/check-2`, ticks 124–126), `GET` → `200 []` (our `400` was FAULTY on check-2 at tick 133). |
 | D1553 | **[PO-3]** Email already registered for this workshop (any letter case) → `409`, nothing changes, also when full or withdrawn (as D1003's duplicate email). PO-3 `200` was FAULTY on `workshop-registration/check-3`, ticks 124–126. |
 | D1554 | **[PO-2]** Workshop not `ACCEPTED` → `409`. Full (20) → `409` (precedent: limits D1301, the 3-talk limit). |
 | D1555 | **[ours]** Check order: `400` body/email → `404` unknown → `409` not a workshop → `409` already registered → `409` not accepted → `409` full. |

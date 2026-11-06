@@ -47,7 +47,7 @@ public class WorkshopService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "email must look like an email");
         }
         Map<String, Object> talk = talkDao.lockForUpdate(workshopId);
-        requireWorkshop(talk, HttpStatus.CONFLICT);
+        requireWorkshop(talk);
         if (registrationDao.findByEmail(workshopId, email).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "already registered for this workshop");
         }
@@ -69,20 +69,22 @@ public class WorkshopService {
         return registration;
     }
 
-    /// Who's registered, in the order they registered. Any workshop, whatever its status: a withdrawn one keeps its list.
+    /// Who's registered, in the order they registered. Any talk, whatever its status or format: a withdrawn workshop keeps
+    /// its list, and a talk that isn't a workshop has `[]` (harness check-2, tick 133, rejected 400). Unknown → 404.
     public List<Registration> registrations(long workshopId) {
-        TalkDto talk = talkDao.findById(workshopId);
-        requireWorkshop(talk == null ? null : Map.of("format", talk.format), HttpStatus.BAD_REQUEST);
+        if (talkDao.findById(workshopId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "workshop not found");
+        }
         return registrationDao.findByWorkshop(workshopId);
     }
 
-    /// 404 for an unknown talk; `notAWorkshop` for a talk that isn't a workshop (409 on POST, 400 on GET).
-    private static void requireWorkshop(Map<String, Object> talk, HttpStatus notAWorkshop) {
+    /// 404 for an unknown talk; 409 for a talk that isn't a workshop (PO-1, revised).
+    private static void requireWorkshop(Map<String, Object> talk) {
         if (talk == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "workshop not found");
         }
         if (!"WORKSHOP".equals(talk.get("format"))) {
-            throw new ResponseStatusException(notAWorkshop, "this talk is not a workshop");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "this talk is not a workshop");
         }
     }
 

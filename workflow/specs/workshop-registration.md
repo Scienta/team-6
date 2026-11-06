@@ -43,7 +43,7 @@ speaker email).
 | email format | must look like an email (PO-4), see above |
 | `GET`, a workshop (any status) | `200`, the list in registration order; `[]` when none; a withdrawn workshop keeps its list (R3) |
 | `GET`, unknown id | `404` |
-| `GET`, a talk that isn't a workshop | `400` (unverified: no check has sent it) |
+| `GET`, a talk that isn't a workshop | `200 []`: harness `check-2` (tick 133) rejected our `400`; it lists right after the refused `POST`, as for a workshop that isn't accepted |
 | trailing slash (`/workshops/{id}/registrations/`) | works like no slash (`TrailingSlashConfig`, every path) |
 
 ## Effects on existing endpoints

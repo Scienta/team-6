@@ -155,12 +155,14 @@ class WorkshopRegistrationTest {
         // like a workshop that isn't accepted; the check sends an ACCEPTED LIGHTNING_10 talk.
         long presentation = api.talk(api.speaker());
         assertEquals(409, register(presentation, "Ada", uniqueEmail()).status);
-        assertEquals(400, list(presentation).status, "GET on a talk that isn't a workshop stays 400");
+        // GET on a talk that isn't a workshop: 200 [] (harness check-2, tick 133, rejected 400 right after the refused POST)
+        assertEquals(0, listSize(presentation));
         long lightning = api.talk(api.speaker(), "Quick one", "LIGHTNING_10", "BEGINNER");
         api.rate(lightning, 1, 5);
         api.rate(lightning, 2, 3);
         assertEquals(200, api.decide(lightning, "ACCEPTED").status);
         assertEquals(409, register(lightning, "Grace", uniqueEmail()).status, "accepted, but not a workshop");
+        assertEquals(0, listSize(lightning), "the refused registration left nothing");
 
         // PO-2: a workshop that isn't accepted is a 409
         for (String status : new String[] {"SUBMITTED", "WAITLISTED", "REJECTED"}) {
