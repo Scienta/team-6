@@ -49,6 +49,9 @@ public class SpeakerDao {
 
     // Used by the old admin page to look people up.
     public List<Map<String, Object>> search(String name) {
-        return jdbc.queryForList("SELECT id, name, email, bio FROM speaker WHERE name ILIKE '%" + name + "%' ORDER BY name");
+        // A bind parameter, not string concatenation: q came straight from the URL (SQL injection). The LIKE
+        // wildcards in the search text are escaped, so "50%" searches for "50%", not "50" and anything.
+        String pattern = "%" + name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+        return jdbc.queryForList("SELECT id, name, email, bio FROM speaker WHERE name ILIKE ? ESCAPE '\\' ORDER BY name", pattern);
     }
 }

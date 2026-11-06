@@ -1,8 +1,12 @@
 package no.scienta.cfp;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -17,6 +21,16 @@ public class CoSpeakerDao {
     /** The talk's co-speakers, in the order they were added. */
     public List<Long> findByTalk(long talkId) {
         return jdbc.queryForList("SELECT speaker_id FROM talk_co_speaker WHERE talk_id = ? ORDER BY id", Long.class, talkId);
+    }
+
+    /** Co-speakers for many talks in one query, each list in the order they were added. Talks without any are missing. */
+    public Map<Long, List<Long>> findByTalks(List<Long> talkIds) {
+        Map<Long, List<Long>> byTalk = new HashMap<>();
+        jdbc.query("SELECT talk_id, speaker_id FROM talk_co_speaker WHERE talk_id = ANY(?) ORDER BY id",
+                ps -> ps.setArray(1, ps.getConnection().createArrayOf("bigint", talkIds.toArray())),
+                (RowCallbackHandler) rs -> byTalk.computeIfAbsent(rs.getLong("talk_id"), k -> new ArrayList<>())
+                        .add(rs.getLong("speaker_id")));
+        return byTalk;
     }
 
     /** Locks the talk row so concurrent adds to the same talk run one at a time. Returns the main speaker, or null. */

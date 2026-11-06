@@ -166,7 +166,7 @@ public class ConferenceService {
         if (talk == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "talk not found");
         }
-        enrich(talk);
+        enrich(Collections.singletonList(talk));
         return talk;
     }
 
@@ -175,9 +175,7 @@ public class ConferenceService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "speaker not found");
         }
         List<TalkDto> talks = talkDao.findBySpeaker(speakerId);
-        for (TalkDto t : talks) {
-            enrich(t);
-        }
+        enrich(talks);
         return talks;
     }
 
@@ -186,9 +184,7 @@ public class ConferenceService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sort must be 'rating'");
         }
         List<TalkDto> talks = speakerId == null ? talkDao.findAll() : talkDao.findBySpeaker(speakerId);
-        for (TalkDto t : talks) {
-            enrich(t);
-        }
+        enrich(talks);
         if ("rating".equals(sort)) {
             List<TalkDto> rated = new ArrayList<>();
             List<TalkDto> unrated = new ArrayList<>();
@@ -216,14 +212,28 @@ public class ConferenceService {
         return talks;
     }
 
-    /** Fills in what other features add to every talk shown: ratings and co-speakers. */
-    private void enrich(TalkDto talk) {
-        talk.coSpeakerIds = coSpeakerDao.findByTalk(talk.id);
-        Map<String, Object> stats = ratingDao.stats(talk.id);
-        int count = ((Number) stats.get("cnt")).intValue();
-        long total = ((Number) stats.get("total")).longValue();
-        talk.ratingCount = count;
-        talk.averageRating = count == 0 ? null : calculateAverage(total, count);
+    /**
+     * Fills in what other features add to every talk shown: ratings and co-speakers. Two queries for the whole list,
+     * not two per talk: GET /talks lists every talk, there are thousands, and with 2 queries per talk the list took
+     * 12-16 s live and starved the 5-connection pool (other requests got no answer).
+     */
+    private void enrich(List<TalkDto> talks) {
+        if (talks.isEmpty()) {
+            return;
+        }
+        List<Long> ids = new ArrayList<>();
+        for (TalkDto t : talks) {
+            ids.add(t.id);
+        }
+        Map<Long, long[]> stats = ratingDao.statsByTalk(ids);
+        Map<Long, List<Long>> coSpeakers = coSpeakerDao.findByTalks(ids);
+        for (TalkDto t : talks) {
+            long[] s = stats.get(t.id);
+            int count = s == null ? 0 : (int) s[0];
+            t.ratingCount = count;
+            t.averageRating = count == 0 ? null : calculateAverage(s[1], count);
+            t.coSpeakerIds = coSpeakers.getOrDefault(t.id, new ArrayList<>());
+        }
     }
 
     // 1 decimal, half up (4.25 -> 4.3)
