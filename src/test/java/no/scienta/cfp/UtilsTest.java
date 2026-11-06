@@ -4,11 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.TimeZone;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class UtilsTest {
@@ -33,9 +30,11 @@ class UtilsTest {
         assertEquals("Workshop", Utils.capitalize("WORKSHOP"));
     }
 
-    // Averages are shown with one decimal, cut off (CFP-61)
+    // Only /admin/stats uses this: its average is cut off (4.25 -> 4.2, CFP-61). Talk averages are NOT rounded this
+    // way: specs/ratings.md rounds halves up (4.25 -> 4.3), see FormatsTest.averageRatingRoundsHalvesUp.
+    // PO?: should the admin stats round like the spec too? Until answered, this pins today's behaviour.
     @Test
-    void roundsRatingToOneDecimal() {
+    void adminStatsRatingIsCutOffToOneDecimal() {
         assertEquals(4.2, Utils.roundRating(4.25));
         assertEquals(3.6, Utils.roundRating(3.6666));
         assertEquals(4.5, Utils.roundRating(4.5));
@@ -56,11 +55,15 @@ class UtilsTest {
         return Utils.parse(dateTime);
     }
 
-    @Disabled("flaky on Jenkins")
+    // Utils.now() has second precision, so comparing it to a second clock reading fails when the second ticks over
+    // in between. Check that it parses back (UTC, the DB format) to the clock time, truncated to the second.
     @Test
-    void nowIsCurrentTime() {
-        SimpleDateFormat f = new SimpleDateFormat(Utils.DB_DATE_TIME);
-        f.setTimeZone(TimeZone.getTimeZone("UTC"));
-        assertEquals(f.format(new Date()), Utils.now());
+    void nowIsCurrentTimeInUtc() {
+        long before = System.currentTimeMillis();
+        String now = Utils.now();
+        long after = System.currentTimeMillis();
+        assertTrue(now.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"), now);
+        long parsed = Utils.parse(now).getTime();
+        assertTrue(parsed >= before - 1000 && parsed <= after, now + " is not between " + before + " and " + after);
     }
 }

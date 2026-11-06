@@ -14,8 +14,6 @@ public class Utils {
 
     public static final String DB_DATE_TIME = "yyyy-MM-dd HH:mm:ss";
 
-    public static final int MAX_TALKS = 5;
-
     private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
     public static String today() {

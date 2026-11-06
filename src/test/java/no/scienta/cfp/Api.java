@@ -89,13 +89,64 @@ final class Api {
     }
 
     long speaker() {
-        Res r = send("POST", "/speakers", "{\"name\":\"Grace Hopper\",\"email\":\"grace-" + UUID.randomUUID() + "@example.com\"}");
+        return speaker("Grace Hopper");
+    }
+
+    long speaker(String name) {
+        Res r = register(name, "speaker-" + UUID.randomUUID() + "@example.com");
         assertEquals(201, r.status, r.toString());
         return r.json.get("id").asLong();
     }
 
+    Res register(String name, String email) {
+        return send("POST", "/speakers", "{\"name\":\"" + name + "\",\"email\":\"" + email + "\"}");
+    }
+
     Res submit(long speakerId) {
-        return send("POST", "/talks", "{\"title\":\"A talk\",\"format\":\"PRESENTATION\",\"level\":\"BEGINNER\",\"speakerId\":" + speakerId + "}");
+        return submit(speakerId, "A talk", "PRESENTATION", "BEGINNER");
+    }
+
+    HttpRequest submitRequest(long speakerId, String title, String format, String level) {
+        return request("POST", "/talks", talkJson(speakerId, title, format, level));
+    }
+
+    Res submit(long speakerId, String title, String format, String level) {
+        return send("POST", "/talks", talkJson(speakerId, title, format, level));
+    }
+
+    private static String talkJson(long speakerId, String title, String format, String level) {
+        return "{\"title\":\"" + title.replace("\"", "\\\"") + "\",\"format\":\"" + format + "\",\"level\":\"" + level
+                + "\",\"speakerId\":" + speakerId + "}";
+    }
+
+    long talk(long speakerId, String title, String format, String level) {
+        Res r = submit(speakerId, title, format, level);
+        assertEquals(201, r.status, r.toString());
+        return r.json.get("id").asLong();
+    }
+
+    /** PUT /talks/{id}/ratings/{reviewer} with the body as given, so tests can send invalid bodies too. */
+    Res rating(Object talkId, Object reviewerId, String json) {
+        return send("PUT", "/talks/" + talkId + "/ratings/" + reviewerId, json);
+    }
+
+    HttpRequest ratingRequest(long talkId, long reviewerId, int score) {
+        return request("PUT", "/talks/" + talkId + "/ratings/" + reviewerId, "{\"score\":" + score + "}");
+    }
+
+    /** The talk as GET /talks/{id} shows it. */
+    Res talkById(long talkId) {
+        Res r = get("/talks/" + talkId);
+        assertEquals(200, r.status, r.toString());
+        return r;
+    }
+
+    /** The ids in a JSON array of talks or speakers, in the order given. */
+    static List<Long> ids(Res r) {
+        assertEquals(200, r.status, r.toString());
+        List<Long> ids = new ArrayList<>();
+        r.json.forEach(n -> ids.add(n.get("id").asLong()));
+        return ids;
     }
 
     long talk(long speakerId) {
@@ -104,9 +155,10 @@ final class Api {
         return r.json.get("id").asLong();
     }
 
-    void rate(long talkId, long reviewerId, int score) {
-        Res r = send("PUT", "/talks/" + talkId + "/ratings/" + reviewerId, "{\"score\":" + score + "}");
+    Res rate(long talkId, long reviewerId, int score) {
+        Res r = rating(talkId, reviewerId, "{\"score\":" + score + "}");
         assertEquals(200, r.status, r.toString());
+        return r;
     }
 
     Res decide(long talkId, String status) {
