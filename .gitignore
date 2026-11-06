@@ -6,3 +6,4 @@ target/
 .idea/
 *.iml
 .fagdag/harness-token
+workflow/.poll-specs.log
