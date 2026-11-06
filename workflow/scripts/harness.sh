@@ -42,7 +42,12 @@ get() {
 }
 
 slugs() {
-  get /specs | grep -oE 'href="/specs/[a-z0-9-]+/spec\.md"' | sed -E 's#href="/specs/([^/]+)/spec\.md"#\1#' | sort -u
+  # Buffer the page first: piping curl straight into grep can kill it with exit 23 when the reader
+  # closes early, which under `set -o pipefail` would look like "no specs" instead of an error.
+  local page; page="$(mktemp)"
+  get /specs > "$page"
+  grep -oE 'href="/specs/[a-z0-9-]+/spec\.md"' "$page" | sed -E 's#href="/specs/([^/]+)/spec\.md"#\1#' | sort -u
+  rm -f "$page"
 }
 
 cmd="${1:-}"; shift || true

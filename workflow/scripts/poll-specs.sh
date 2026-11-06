@@ -11,12 +11,26 @@ h="$root/workflow/scripts/harness.sh"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
+# Never report "nothing new" because we failed to reach the harness: an empty or failed listing is
+# an error (exit 1), not an all-clear.
+if ! "$h" list > "$tmp/slugs" || [ ! -s "$tmp/slugs" ]; then
+  echo "ERROR: could not list specs from the harness" >&2
+  exit 1
+fi
+
 found=0
-for s in $("$h" list); do
+while read -r s; do
+  [ -n "$s" ] || continue
   sleep 1
-  if ! "$h" spec "$s" > "$tmp/$s.md" 2>/dev/null; then
-    continue  # listed but not released yet (404)
-  fi
+  set +e
+  "$h" spec "$s" > "$tmp/$s.md" 2>/dev/null
+  rc=$?
+  set -e
+  case "$rc" in
+    0) ;;
+    4) continue ;;  # listed but not released yet (404)
+    *) echo "ERROR: fetching $s failed (exit $rc)" >&2; exit 1 ;;
+  esac
   dest="$root/specs/$s.md"
   if [ ! -f "$dest" ]; then
     echo "NEW      $s  $(grep -m1 '^Kind:' "$tmp/$s.md" || true)"
@@ -25,7 +39,7 @@ for s in $("$h" list); do
     echo "CHANGED  $s  local=$(grep -m1 '^Version:' "$dest" || echo '?')  harness=$(grep -m1 '^Version:' "$tmp/$s.md" || echo '?')"
     found=1
   fi
-done
+done < "$tmp/slugs"
 
-[ "$found" = 0 ] && echo "same: $(ls "$root"/specs/*.md | wc -l) specs, nothing new"
+[ "$found" = 0 ] && echo "same: $(wc -l < "$tmp/slugs") specs on the harness, nothing new"
 exit $(( found ? 10 : 0 ))

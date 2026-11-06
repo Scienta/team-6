@@ -16,6 +16,7 @@ ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 echo "[$(ts)] watch-specs started, every ${interval}s, baseline $(ls "$root"/specs/*.md | wc -l) specs" >> "$log"
 
 while true; do
+  started=$(date +%s)
   set +e
   out="$("$root/workflow/scripts/poll-specs.sh" 2>&1)"
   code=$?
@@ -32,5 +33,9 @@ while true; do
     *)  echo "[$(ts)] ERR  (exit $code) $out" >> "$log" ;;
   esac
 
-  sleep "$interval"
+  # Sleep the remainder of the interval, not a flat $interval: a poll takes ~1s per spec (the
+  # harness rate limit), so sleeping the full interval afterwards makes each cycle drift later.
+  elapsed=$(( $(date +%s) - started ))
+  remaining=$(( interval - elapsed ))
+  [ "$remaining" -gt 0 ] && sleep "$remaining"
 done
