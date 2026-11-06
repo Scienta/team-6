@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.dao;
 
 import java.util.List;
 import java.util.Optional;
@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import no.scienta.cfp.model.Registration;
 
 /// Workshop registrations, in the order they were made (id order).
 @Repository

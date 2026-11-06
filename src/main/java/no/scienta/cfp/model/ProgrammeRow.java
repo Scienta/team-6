@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.model;
 
 import java.util.List;
 

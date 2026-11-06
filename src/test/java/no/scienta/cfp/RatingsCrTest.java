@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import no.scienta.cfp.service.ConferenceService;
 
 /**
  * Ratings change request (specs/ratings-cr.md, workflow/specs/ratings-cr.md, DESIGN.md D1204, D1206, D1208–D1210):

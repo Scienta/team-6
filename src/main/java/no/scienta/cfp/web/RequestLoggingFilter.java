@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.web;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

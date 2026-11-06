@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.model;
 
 /**
  * Request body for POST /talks. Validated in ConferenceService (the annotations didn't work with the

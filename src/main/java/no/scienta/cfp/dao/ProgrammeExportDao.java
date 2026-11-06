@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.dao;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -6,6 +6,8 @@ import java.util.List;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import no.scienta.cfp.model.Programme;
+import no.scienta.cfp.model.ProgrammeRow;
 
 /// Reads the whole programme in one query (D2082): every filled place, its talk, the main speaker's name and the
 /// co-speakers' names in the order they were added.

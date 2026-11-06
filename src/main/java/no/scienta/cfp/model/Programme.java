@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.model;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -10,15 +10,15 @@ import java.util.Map;
  * The venue (scheduling R1): three rooms and the same five slots in each. Fixed; nobody can change them. Times are
  * written as on the signs, HH:mm on a 24-hour clock, and kept as strings so no formatter decides them (D1702).
  */
-final class Programme {
+public final class Programme {
 
-    static final List<String> ROOMS = Collections.unmodifiableList(Arrays.asList("R1", "R2", "R3"));
+    public static final List<String> ROOMS = Collections.unmodifiableList(Arrays.asList("R1", "R2", "R3"));
 
     /** Slot → {start, end}, in programme order. */
-    static final Map<String, String[]> SLOTS;
+    public static final Map<String, String[]> SLOTS;
 
     /** The only slot long enough for a workshop (scheduling R5). */
-    static final String LONG_SLOT = "S4";
+    public static final String LONG_SLOT = "S4";
 
     static {
         Map<String, String[]> slots = new LinkedHashMap<>();
@@ -33,12 +33,12 @@ final class Programme {
     private Programme() {
     }
 
-    static boolean exists(String room, String slot) {
+    public static boolean exists(String room, String slot) {
         return ROOMS.contains(room) && SLOTS.containsKey(slot);
     }
 
     /** The Entry as the API shows it: room, slot, start, end, talkId, in that order. */
-    static Map<String, Object> entry(String room, String slot, long talkId) {
+    public static Map<String, Object> entry(String room, String slot, long talkId) {
         Map<String, Object> e = new LinkedHashMap<>();
         e.put("room", room);
         e.put("slot", slot);

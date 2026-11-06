@@ -11,8 +11,9 @@ Input: a slug. If `specs/<slug>.md` is missing or may be stale, run `/sync-specs
 1. **Read** `specs/<slug>.md` (and `specs/<slug>.diff` for a change request), the specs it links to,
    `workflow/DESIGN.md` (the whole service: rules from other features, non-functional requirements
    D1700+, cross-cutting rules D1900+), and `workflow/PROCESS.md`.
-2. **Current state.** Read what exists: the existing feature code follows Controller →
-   `ConferenceService` → DAO (`JdbcTemplate`) → `schema.sql`, with `enrich(TalkDto)` adding
+2. **Current state.** Read what exists: the existing feature code follows Controller (`web`) →
+   service (`service`, e.g. `ConferenceService`) → DAO (`dao`, `JdbcTemplate`) → `schema.sql`, with types in `model`
+   (DESIGN.md D1730), with `enrich(TalkDto)` adding
    cross-feature fields. Check git log, `workflow/specs/<slug>.md`, existing tests and hurl files,
    and `workflow/scripts/harness.sh feedback <slug>`. Use `jbcontext search` only if you don't
    know where something lives.

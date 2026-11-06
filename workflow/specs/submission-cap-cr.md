@@ -67,5 +67,9 @@ backstop; the speaker-row lock is the argument (as D1806).
 
 ## Evidence
 
-Pending: tests per rule and per PO answer, a concurrent test mixing submissions and co-speaker `PUT`s
-for one speaker, and `examples/submission-cap-cr.hurl`.
+- `src/test/java/no/scienta/cfp/SubmissionCapTest.java`: R1–R6 and PO-1..5 (11 tests, 7 red before the change).
+  Two rush tests for one speaker's last place: 5 submissions + 5 co-speaker PUTs, and 8 co-speaker PUTs on
+  8 different talks. **Mutation check (tick ~195):** with `talkDao.lockSpeaker` removed from `addCoSpeaker`,
+  both fail with 5 winners instead of 1; with it, 4 runs × 3 rounds pass. So the tests do prove the lock.
+- `CoSpeakersTest#coSpeakingCountsTowardsTheLimit` (reversed from co-speakers R7).
+- `examples/submission-cap-cr.hurl` (20 requests); `examples/co-speakers.hurl` R7 section reversed.

@@ -10,6 +10,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import no.scienta.cfp.dao.CoSpeakerDao;
+import no.scienta.cfp.dao.ProgrammeDao;
+import no.scienta.cfp.dao.RatingDao;
+import no.scienta.cfp.dao.SpeakerDao;
+import no.scienta.cfp.dao.TalkDao;
+import no.scienta.cfp.model.SpeakerForm;
+import no.scienta.cfp.model.TalkForm;
+import no.scienta.cfp.service.ConferenceService;
+import no.scienta.cfp.service.NotificationService;
 
 class ConferenceServiceTest {
 

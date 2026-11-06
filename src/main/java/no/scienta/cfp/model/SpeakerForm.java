@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.model;
 
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;

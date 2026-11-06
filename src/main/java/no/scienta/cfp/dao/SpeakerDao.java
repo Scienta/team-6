@@ -1,10 +1,11 @@
-package no.scienta.cfp;
+package no.scienta.cfp.dao;
 
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import no.scienta.cfp.util.Utils;
 
 @Repository
 public class SpeakerDao {

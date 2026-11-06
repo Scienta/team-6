@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.web;
 
 import java.util.List;
 import java.util.Map;
@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import no.scienta.cfp.model.TalkDto;
+import no.scienta.cfp.model.TalkForm;
+import no.scienta.cfp.service.ConferenceService;
 
 @RestController
 public class TalkController {

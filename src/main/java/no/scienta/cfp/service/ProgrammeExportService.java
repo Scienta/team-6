@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -6,6 +6,9 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import no.scienta.cfp.dao.ProgrammeExportDao;
+import no.scienta.cfp.model.Programme;
+import no.scienta.cfp.model.ProgrammeRow;
 
 /// The programme export (workflow/specs/programme-export.md, DESIGN.md D2000–D2086): one list of rows, written as JSON
 /// or as CSV, so both views always have the same rows in the same order (D2081).

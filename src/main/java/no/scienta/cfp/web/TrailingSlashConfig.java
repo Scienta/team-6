@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.web;
 
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;

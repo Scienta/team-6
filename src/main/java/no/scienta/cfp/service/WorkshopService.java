@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.service;
 
 import java.util.List;
 import java.util.Map;
@@ -11,6 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import no.scienta.cfp.dao.RegistrationDao;
+import no.scienta.cfp.dao.TalkDao;
+import no.scienta.cfp.model.Registration;
 
 /// Workshop registration (workflow/specs/workshop-registration.md): accepted workshops only, at most 20 attendees,
 /// one registration per email per workshop whatever the letter case.

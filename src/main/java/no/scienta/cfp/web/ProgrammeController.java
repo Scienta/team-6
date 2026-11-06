@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.web;
 
 import java.util.Map;
 
@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import no.scienta.cfp.service.ConferenceService;
 
 /** Programme scheduling (workflow/specs/scheduling.md). Path variables named explicitly, as in TalkController. */
 @RestController

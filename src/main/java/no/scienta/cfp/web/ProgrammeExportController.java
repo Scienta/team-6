@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.web;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -8,6 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import no.scienta.cfp.model.ProgrammeRow;
+import no.scienta.cfp.service.ProgrammeExportService;
 
 @RestController
 public class ProgrammeExportController {

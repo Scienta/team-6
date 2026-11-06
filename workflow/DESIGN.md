@@ -295,7 +295,7 @@ instead of repeating these.
 
 | # | Requirement |
 |---|---|
-| D1730 | Controller → `ConferenceService` → DAO (`JdbcTemplate`) → `schema.sql`. Errors are `ResponseStatusException` with the D1904 status codes. |
+| D1730 | Controller → service → DAO (`JdbcTemplate`) → `schema.sql`, one package per layer under `no.scienta.cfp`: `web` (controllers, `RequestLoggingFilter`, `TrailingSlashConfig`, `VersionInfoContributor`), `service` (`ConferenceService`, `WorkshopService`, `ProgrammeExportService`, `NotificationService`), `dao` (one DAO per table or read model), `model` (request and response types, records, `Programme` constants), `util` (`Utils`); `CfpApplication` stays at the root so component scanning covers every package. A new feature adds its classes to these packages; it gets its own service when `ConferenceService` doesn't need it (as workshops and programme export). Tests stay in `no.scienta.cfp` and talk HTTP, so they only need public types. Errors are `ResponseStatusException` with the D1904 status codes. |
 | D1731 | Every Talk-returning path ends in `getTalk`/`enrich(TalkDto)`, which adds the cross-feature fields (D1900). A new Talk field is added in `enrich`, not per endpoint. |
 
 **Observability and verification** **[ours]**

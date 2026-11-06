@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.web;
 
 import java.util.List;
 import java.util.Map;
@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import no.scienta.cfp.model.Registration;
+import no.scienta.cfp.service.WorkshopService;
 
 @RestController
 public class WorkshopController {

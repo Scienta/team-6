@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.dao;
 
 import java.util.Date;
 import java.util.List;
@@ -8,6 +8,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import no.scienta.cfp.model.TalkDto;
+import no.scienta.cfp.util.Utils;
 
 @Repository
 public class TalkDao {

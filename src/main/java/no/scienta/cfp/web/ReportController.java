@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.web;
 
 import java.util.List;
 import java.util.Map;
@@ -7,6 +7,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import no.scienta.cfp.model.TalkDto;
+import no.scienta.cfp.service.ConferenceService;
+import no.scienta.cfp.util.Utils;
 
 /**
  * Exports for the programme committee's spreadsheet. Not part of the public API.

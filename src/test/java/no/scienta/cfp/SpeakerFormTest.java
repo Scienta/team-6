@@ -6,6 +6,7 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 
 import org.junit.jupiter.api.Test;
+import no.scienta.cfp.model.SpeakerForm;
 
 /** Speakers: "A bio is at most 500 characters", counted as Unicode code points (an emoji is 1, not 2). */
 class SpeakerFormTest {

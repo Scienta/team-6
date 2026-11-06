@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.web;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

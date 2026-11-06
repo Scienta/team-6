@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import no.scienta.cfp.dao.ProgrammeDao;
 
 /**
  * Programme scheduling (workflow/specs/scheduling.md). Test names follow the rules R1..R10; the open product owner

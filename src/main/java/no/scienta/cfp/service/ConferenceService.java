@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +19,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import no.scienta.cfp.dao.CoSpeakerDao;
+import no.scienta.cfp.dao.ProgrammeDao;
+import no.scienta.cfp.dao.RatingDao;
+import no.scienta.cfp.dao.SpeakerDao;
+import no.scienta.cfp.dao.TalkDao;
+import no.scienta.cfp.model.Programme;
+import no.scienta.cfp.model.SpeakerForm;
+import no.scienta.cfp.model.TalkDto;
+import no.scienta.cfp.model.TalkForm;
+import no.scienta.cfp.util.Utils;
 
 /**
  * Speakers, talks and ratings.
@@ -240,13 +250,13 @@ public class ConferenceService {
 
     /// The average a talk shows (ratings-cr, DESIGN.md D1204, D1208): with 5 or more ratings, exactly one highest and
     /// one lowest score are left out; then rounded with [#roundAverage].
-    static BigDecimal calculateAverage(int count, long sum, long max, long min) {
+    public static BigDecimal calculateAverage(int count, long sum, long max, long min) {
         return count >= 5 ? roundAverage(sum - max - min, count - 2) : roundAverage(sum, count);
     }
 
     /// Two decimals, ties to the even neighbour, decided on the exact value (`25/8 = 3.125` → `3.12`), and always
     /// written with two decimals (`4.00`, PO-2): a scale-2 `BigDecimal`, which JSON writes as `4.00`.
-    static BigDecimal roundAverage(long sum, long count) {
+    public static BigDecimal roundAverage(long sum, long count) {
         return BigDecimal.valueOf(sum).divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_EVEN);
     }
 

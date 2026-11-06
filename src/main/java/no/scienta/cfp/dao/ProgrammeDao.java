@@ -1,4 +1,4 @@
-package no.scienta.cfp;
+package no.scienta.cfp.dao;
 
 import java.util.HashMap;
 import java.util.HashSet;
