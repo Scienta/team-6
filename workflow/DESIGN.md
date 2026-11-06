@@ -210,14 +210,13 @@ Source: `specs/workshop-registration.md` (Version 1), decisions in
 | D1508 | `Registration` = `{ id, workshopId, name, email }`. |
 | D1550 | **[ours]** `POST` new → `201` + Registration. `name`/`email` missing, null, not a string or blank → `400`. Body not a JSON object / no body → `400`. |
 | D1551 | **[PO-4]** The email must look like an email: one `@`, no whitespace (Unicode too) or control characters, a domain of ≥2 non-empty dot-separated labels → else `400`. Not trimmed: `" ada@example.com "` → `400`. |
-| D1552 | **[ours/PO-1]** Unknown talk id → `404` (POST and GET). A talk that isn't a `WORKSHOP` → `400` (POST and GET; precedent D1350). |
-| D1553 | **[PO-3]** Email already registered for this workshop (any letter case) → `200` with the **existing** registration (email as first typed), nothing changes — also when the workshop is full or withdrawn. |
+| D1552 | **[ours/PO-1]** Unknown talk id → `404` (POST and GET). A talk that isn't a `WORKSHOP`: `POST` → `409` (PO-1 `400` was FAULTY on `workshop-registration/check-2`, ticks 124–126), `GET` → `400` (unverified). |
+| D1553 | **[PO-3]** Email already registered for this workshop (any letter case) → `409`, nothing changes, also when full or withdrawn (as D1003's duplicate email). PO-3 `200` was FAULTY on `workshop-registration/check-3`, ticks 124–126. |
 | D1554 | **[PO-2]** Workshop not `ACCEPTED` → `409`. Full (20) → `409` (precedent: limits D1301, the 3-talk limit). |
-| D1555 | **[ours]** Check order: `400` body/email → `404` unknown → `400` not a workshop → `200` already registered → `409` not accepted → `409` full. |
-| D1556 | **[ours]** Concurrency: one `@Transactional` that locks the talk row (`TalkDao.lockForUpdate`, the same lock as D14xx decisions and withdrawals), then duplicate, status and count, then insert. The unique index is a backstop mapped to `409`. Tested: 30 concurrent → 20 × `201` + 10 × `409`; 5 concurrent same-email → 1 × `201` + 4 × `200`, same id. |
+| D1555 | **[ours]** Check order: `400` body/email → `404` unknown → `409` not a workshop → `409` already registered → `409` not accepted → `409` full. |
+| D1556 | **[ours]** Concurrency: one `@Transactional` that locks the talk row (`TalkDao.lockForUpdate`, the same lock as D14xx decisions and withdrawals), then duplicate, status and count, then insert. The unique index is a backstop mapped to `409`. Tested: 30 concurrent → 20 × `201` + 10 × `409`; 5 concurrent same-email → 1 × `201` + 4 × `409`. |
 
-Riskiest after claiming (no harness-verified precedent): D1553 (`200`) and D1554 not accepted
-(`409`). Attendees are **not** speakers: no shared table, although D1503 uses the same rule as D1003.
+D1552 (POST `409`), D1553 and D1554 are harness-verified only once check-2 and check-3 are OK after the tick-126 fix. Attendees are **not** speakers: no shared table, although D1503 uses the same rule as D1003.
 
 ## D1600–D1699 Platform / Spring Boot 4
 

@@ -56,13 +56,10 @@ jsonpath "$.workshopId" == {{ws_id}}
 jsonpath "$.name" == "Ada Lovelace"
 jsonpath "$.email" matches /^Ada-.*@Example\.COM$/
 
-# R5, PO-3: the same email in other letter case is the existing registration, 200
+# R5, PO-3 (revised tick 126): the same email in other letter case is a 409
 POST {{base_url}}/workshops/{{ws_id}}/registrations
 { "name": "Ada L.", "email": "ADA-{{ada_uuid}}@example.com" }
-HTTP 200
-[Asserts]
-jsonpath "$.id" == {{ada_id}}
-jsonpath "$.name" == "Ada Lovelace"
+HTTP 409
 
 # R1: name and email are required; PO-4: the email must look like an email
 POST {{base_url}}/workshops/{{ws_id}}/registrations
@@ -77,14 +74,14 @@ POST {{base_url}}/workshops/{{ws_id}}/registrations
 { "name": "Ada", "email": "ada@example" }
 HTTP 400
 
-# 404: unknown talk; PO-1: not a workshop is a 400; PO-2: a workshop that isn't accepted is a 409
+# 404: unknown talk; PO-1 (revised tick 126): not a workshop is a 409; PO-2: a workshop that isn't accepted is a 409
 POST {{base_url}}/workshops/999999999/registrations
 { "name": "Ada", "email": "ada@example.com" }
 HTTP 404
 
 POST {{base_url}}/workshops/{{presentation_id}}/registrations
 { "name": "Ada", "email": "ada@example.com" }
-HTTP 400
+HTTP 409
 
 POST {{base_url}}/workshops/{{submitted_id}}/registrations
 { "name": "Ada", "email": "ada@example.com" }

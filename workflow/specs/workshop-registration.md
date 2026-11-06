@@ -35,15 +35,15 @@ speaker email).
 | very long `name`/`email` | accepted: the spec sets no limit (review finding, accepted) |
 | no body / malformed JSON | `400` (Spring) |
 | talk id doesn't exist | `404` |
-| talk exists but isn't a `WORKSHOP` (PO-1) | `400` |
+| talk exists but isn't a `WORKSHOP` (PO-1, revised tick 126) | `POST` → `409`, as a workshop that isn't accepted |
 | workshop not `ACCEPTED` (submitted, waitlisted, rejected, withdrawn) (PO-2) | `409` |
 | workshop full (20) | `409` |
-| email already registered for this workshop, any letter case (PO-3) | `200`, the **existing** registration (email as first typed), nothing changes. Also when the workshop has since filled up or been withdrawn: the person is on its list. |
-| order of checks | `400` body/email → `404` unknown talk → `400` not a workshop → `200` already registered → `409` not accepted → `409` full |
+| email already registered for this workshop, any letter case (PO-3, revised tick 126) | `409`, nothing changes (as a duplicate speaker email), also when the workshop is full or withdrawn |
+| order of checks | `400` body/email → `404` unknown talk → `409` not a workshop → `409` already registered → `409` not accepted → `409` full |
 | email format | must look like an email (PO-4), see above |
 | `GET`, a workshop (any status) | `200`, the list in registration order; `[]` when none; a withdrawn workshop keeps its list (R3) |
 | `GET`, unknown id | `404` |
-| `GET`, a talk that isn't a workshop | `400` (as `POST`, PO-1) |
+| `GET`, a talk that isn't a workshop | `400` (unverified: no check has sent it) |
 | trailing slash (`/workshops/{id}/registrations/`) | works like no slash (`TrailingSlashConfig`, every path) |
 
 ## Effects on existing endpoints
@@ -63,9 +63,9 @@ a few short statements, so a rush of 30+ queues briefly on the row lock.
 
 | # | Question | Answer | Asked (tick) | Test |
 |---|---|---|---|---|
-| PO-1 | A talk that isn't a workshop: 404 or 400? | `400` | 101 | `WorkshopRegistrationTest#onlyAcceptedWorkshopsTakeRegistrations`, hurl "# PO-1" |
+| PO-1 | A talk that isn't a workshop: 404 or 400? | `400` at tick 101; **revised to `409`** at tick 126: harness `workshop-registration/check-2` accepted our `409` for a REJECTED workshop, then failed on our `400` for an ACCEPTED `LIGHTNING_10` talk | 101, 126 | `WorkshopRegistrationTest#onlyAcceptedWorkshopsTakeRegistrations`, hurl "# PO-1" |
 | PO-2 | A workshop that isn't accepted: 409, 400 or 404? | `409` | 101 | `WorkshopRegistrationTest#onlyAcceptedWorkshopsTakeRegistrations`, hurl "# PO-2" |
-| PO-3 | Same email again for the same workshop: 409 or 200 with the existing registration? | `200`, the existing registration | 101 | `WorkshopRegistrationTest#oneRegistrationPerEmailRegardlessOfCase`, `concurrentDuplicatesRegisterOnce`, hurl "# PO-3" |
+| PO-3 | Same email again for the same workshop: 409 or 200 with the existing registration? | `200` at tick 101; **revised to `409`** at tick 126: harness `workshop-registration/check-3` failed on our `200` for the same email in upper case | 101, 126 | `WorkshopRegistrationTest#oneRegistrationPerEmailRegardlessOfCase`, `concurrentDuplicatesRegisterOnce`, hurl "# PO-3" |
 | PO-4 | Email format: non-blank only, or must look like an email? | must look like an email | 101 | `WorkshopRegistrationTest#nameAndEmailAreRequired`, hurl "# PO-4" |
 
 Note on precedent (`/verify-feature` 3b): PO-1 `400` matches co-speakers' main-speaker case (input
@@ -77,4 +77,4 @@ unclaimed). Watch it after the claim.
 - `examples/workshop-registration.hurl`: every rule and decision above.
 - `src/test/java/no/scienta/cfp/WorkshopRegistrationTest.java`: the rules over HTTP, plus 30
   concurrent registrations for one workshop give exactly 20 `201`s and 10 `409`s, and 5 concurrent
-  registrations with one email in different letter cases give one `201` and four `200`s with the same id (PO-3).
+  registrations with one email in different letter cases give one `201` and four `409`s (PO-3).

@@ -34,26 +34,22 @@ public class WorkshopService {
         this.registrationDao = registrationDao;
     }
 
-    /// The outcome of a registration: a new one (201), or the one this email already had (200, PO-3).
-    public record Result(Registration registration, boolean created) {
-    }
-
     /// Registers an attendee. The talk row is locked first (the same lock as acceptance decisions and withdrawals), so
     /// a rush of registrations for one workshop runs one at a time: the capacity holds, duplicates can't slip in, and
-    /// a registration can't race a withdrawal. Checks: 400 body → 404 unknown → 400 not a workshop → 200 already
-    /// registered → 409 not accepted → 409 full.
+    /// a registration can't race a withdrawal. Checks: 400 body → 404 unknown → 409 not a workshop (PO-1) → 409 already
+    /// registered (PO-3) → 409 not accepted → 409 full. PO-1 and PO-3 were revised at tick 126: the harness's
+    /// workshop-registration/check-2 and check-3 rejected 400 and 200.
     @Transactional
-    public Result register(long workshopId, Map<String, Object> body) {
+    public Registration register(long workshopId, Map<String, Object> body) {
         String name = requiredText(body, "name");
         String email = requiredText(body, "email");
         if (!EMAIL.matcher(email).matches()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "email must look like an email");
         }
         Map<String, Object> talk = talkDao.lockForUpdate(workshopId);
-        requireWorkshop(talk);
-        var existing = registrationDao.findByEmail(workshopId, email);
-        if (existing.isPresent()) {
-            return new Result(existing.get(), false);
+        requireWorkshop(talk, HttpStatus.CONFLICT);
+        if (registrationDao.findByEmail(workshopId, email).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "already registered for this workshop");
         }
         if (!"ACCEPTED".equals(talk.get("status"))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "only accepted workshops take registrations");
@@ -70,22 +66,23 @@ public class WorkshopService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "already registered for this workshop");
         }
         log.info("workshop {}: registration {}", workshopId, registration.id());
-        return new Result(registration, true);
+        return registration;
     }
 
     /// Who's registered, in the order they registered. Any workshop, whatever its status: a withdrawn one keeps its list.
     public List<Registration> registrations(long workshopId) {
         TalkDto talk = talkDao.findById(workshopId);
-        requireWorkshop(talk == null ? null : Map.of("format", talk.format));
+        requireWorkshop(talk == null ? null : Map.of("format", talk.format), HttpStatus.BAD_REQUEST);
         return registrationDao.findByWorkshop(workshopId);
     }
 
-    private static void requireWorkshop(Map<String, Object> talk) {
+    /// 404 for an unknown talk; `notAWorkshop` for a talk that isn't a workshop (409 on POST, 400 on GET).
+    private static void requireWorkshop(Map<String, Object> talk, HttpStatus notAWorkshop) {
         if (talk == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "workshop not found");
         }
         if (!"WORKSHOP".equals(talk.get("format"))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "this talk is not a workshop");
+            throw new ResponseStatusException(notAWorkshop, "this talk is not a workshop");
         }
     }
 

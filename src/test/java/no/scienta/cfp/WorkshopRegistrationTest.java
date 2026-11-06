@@ -5,9 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.http.HttpRequest;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -153,10 +151,16 @@ class WorkshopRegistrationTest {
         assertEquals(404, register(999_999, "Ada", uniqueEmail()).status, "unknown talk");
         assertEquals(404, list(999_999).status);
 
-        // PO-1: a talk that isn't a workshop is a 400, whatever its status
+        // PO-1 (revised tick 126, harness workshop-registration/check-2): a talk that isn't a workshop is a 409 on POST,
+        // like a workshop that isn't accepted; the check sends an ACCEPTED LIGHTNING_10 talk.
         long presentation = api.talk(api.speaker());
-        assertEquals(400, register(presentation, "Ada", uniqueEmail()).status);
-        assertEquals(400, list(presentation).status);
+        assertEquals(409, register(presentation, "Ada", uniqueEmail()).status);
+        assertEquals(400, list(presentation).status, "GET on a talk that isn't a workshop stays 400");
+        long lightning = api.talk(api.speaker(), "Quick one", "LIGHTNING_10", "BEGINNER");
+        api.rate(lightning, 1, 5);
+        api.rate(lightning, 2, 3);
+        assertEquals(200, api.decide(lightning, "ACCEPTED").status);
+        assertEquals(409, register(lightning, "Grace", uniqueEmail()).status, "accepted, but not a workshop");
 
         // PO-2: a workshop that isn't accepted is a 409
         for (String status : new String[] {"SUBMITTED", "WAITLISTED", "REJECTED"}) {
@@ -175,15 +179,14 @@ class WorkshopRegistrationTest {
         api.rate(workshop, 1, 4);
         api.rate(workshop, 2, 5);
         api.decide(workshop, "ACCEPTED");
-        Api.Res ada = register(workshop, "Ada", "ada@example.com");
+        assertEquals(201, register(workshop, "Ada", "ada@example.com").status);
         assertEquals(201, register(workshop, "Grace", "grace@example.com").status);
 
         assertEquals(200, api.withdraw(workshop, speaker).status);
         assertEquals(2, listSize(workshop), "R3: the people already registered stay");
         assertEquals(409, register(workshop, "Edsger", uniqueEmail()).status, "no new registrations");
-        Api.Res again = register(workshop, "Ada", "ADA@example.com");
-        assertEquals(200, again.status, "PO-3: already on the list: " + again);
-        assertEquals(ada.number("$.id"), again.number("$.id"));
+        assertEquals(409, register(workshop, "Ada", "ADA@example.com").status, "already on the list: still a 409");
+        assertEquals(2, listSize(workshop));
     }
 
     // ---------------------------------------------------------------- R4
@@ -197,7 +200,7 @@ class WorkshopRegistrationTest {
             assertEquals(201, register(workshop, "Attendee " + i, uniqueEmail()).status, "attendee " + i);
         }
         assertEquals(409, register(workshop, "Attendee 21", uniqueEmail()).status, "the 21st");
-        assertEquals(200, register(workshop, "Attendee 0", first).status, "PO-3: already registered, also when full");
+        assertEquals(409, register(workshop, "Attendee 0", first).status, "PO-3: already registered is a 409, also when full");
         assertEquals(20, listSize(workshop));
     }
 
@@ -230,12 +233,14 @@ class WorkshopRegistrationTest {
         long workshop = acceptedWorkshop();
         Api.Res first = register(workshop, "Ada", "ada@example.com");
         assertEquals(201, first.status);
+        // PO-3 (revised tick 126, harness workshop-registration/check-3): the same email in any letter case is a 409,
+        // as a duplicate speaker email
         Api.Res again = register(workshop, "Ada L.", "ADA@Example.com");
-        assertEquals(200, again.status, "PO-3: the existing registration: " + again);
-        assertEquals(first.number("$.id"), again.number("$.id"));
-        assertEquals("ada@example.com", again.text("email"), "as first typed");
-        assertEquals("Ada", again.text("name"), "nothing changes");
-        assertEquals(1, listSize(workshop));
+        assertEquals(409, again.status, again.toString());
+        Api.Res list = list(workshop);
+        assertEquals(1, list.size("$"));
+        assertEquals("ada@example.com", list.text("[0].email"), "the first registration is kept as typed");
+        assertEquals("Ada", list.text("[0].name"), "nothing changes");
     }
 
     @Test
@@ -247,16 +252,13 @@ class WorkshopRegistrationTest {
             clicks.add(registerRequest(workshop, "Grace", email));
         }
         int created = 0;
-        Set<Long> ids = new HashSet<>();
         for (Api.Res r : api.concurrently(clicks)) {
-            assertTrue(r.status == 201 || r.status == 200, r.toString());
+            assertTrue(r.status == 201 || r.status == 409, r.toString());
             if (r.status == 201) {
                 created++;
             }
-            ids.add(r.number("$.id"));
         }
-        assertEquals(1, created);
-        assertEquals(1, ids.size(), "every answer is the same registration");
+        assertEquals(1, created, "one 201, the rest 409");
         assertEquals(1, listSize(workshop));
     }
 

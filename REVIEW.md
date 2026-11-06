@@ -80,6 +80,17 @@ and the harness rejected it too (tick 90, on the new code). `400` passed at tick
   workshop-registration spec starts from this rule. Logs (`logs.sh`) plus `harness.sh timeline`
   showed which response failed, and when a deploy actually went live.
 
+**Workshop registration check-2 and check-3 (FAULTY from the claim at tick 123).** Both failures
+landed exactly on two product-owner answers we had flagged as the riskiest, because no check had
+verified anything like them. *Not a workshop → `400`* (PO-1): check-2 accepted our `409` for a rejected
+workshop, then failed on `400` for an accepted `LIGHTNING_10` talk. Both requests test "only accepted
+workshops take registrations", so we answered `409` for both. *Same email again → `200` with the
+existing registration* (PO-3): check-3 failed on it. The precedent the harness had verified, a duplicate
+speaker email, is `409`. *Lesson:* this is the second time a PO answer that went against a verified
+precedent was wrong (after co-speakers PO-2). The `/verify-feature` 3b check found the risk but only
+logged it. Next time, when a PO answer contradicts a harness-verified precedent, say so before
+building on it, and offer the precedent as the default.
+
 **(Caught by our own gate, not the harness:) `ratedAtDisplay` and the JDK.** The first run of
 `verify.sh` failed `ratings.hurl` because the local service ran on JDK 27, which puts a narrow
 no-break space (U+202F) before AM/PM. Production then ran Temurin 11, so the deployed service was
