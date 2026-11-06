@@ -27,6 +27,20 @@ Hurl example against a local service). Templates for our spec decisions and plan
 [workflow/templates/](workflow/templates/). Agent guardrails are in
 [.claude/rules/workflow.md](.claude/rules/workflow.md).
 
+Two additions from the afternoon:
+
+- **A design document as the check document.** The organisers' specs in `specs/` are inputs (feature
+  and change requests); [workflow/DESIGN.md](workflow/DESIGN.md) combines all of them, our decisions
+  and every PO answer into one numbered rule set (D1000+), plus the non-functional requirements
+  (D1700+) and cross-cutting rules (D1900+). `PROCESS.md` step 2c folds each feature into it, and
+  PO answers, review findings and triage update the same D-rules; `/verify-feature` checks that
+  `DESIGN.md`, the feature's spec and the code agree.
+- **A spec watcher.** [workflow/scripts/watch-specs.sh](workflow/scripts/watch-specs.sh) polls the
+  harness every 60 s (read-only, via [poll-specs.sh](workflow/scripts/poll-specs.sh)), logs every
+  check and stops on the first new or changed spec. It reported every release from `spring-boot-4`
+  (tick 40) to `submission-cap-cr` (tick 180), six in all, and a person then ran `/sync-specs` and
+  restarted it. It is idle between a find and the restart, so it is a prompt, not a guarantee.
+
 ## 2. How we reviewed agent output
 
 <!-- Who or what reviewed the agents' work (people, review agents, tests, Hurl examples, gates in
@@ -44,6 +58,16 @@ the deploy workflow), and against what (the spec, its examples, your own checks)
   a production-like JDK) before every push.
 - **Independent review agent** per feature (`/verify-feature`), given the specs and the diff but
   not our conclusions. It reports rule → implementation → test, plus races and regressions.
+- **Consistency checks across documents.** After each pull we checked `specs/`, `workflow/specs/`,
+  `DESIGN.md` and the code against each other. Findings: PROCESS.md still prescribed JDK 11 after
+  the upgrade; `workflow/specs/acceptance.md` named a stats endpoint that doesn't exist; co-speakers
+  R3 and `DESIGN.md` still said `200` after PO-2 had moved to `400`; `PUT /speakers/{id}` breaks the
+  speaker rules (1000-character bio, blank name). The checks also corrected our own misreading: the
+  `V:` line in a spec is not a version.
+- **Spec analysis before code.** Integrating a spec into `DESIGN.md` before planning surfaced traps
+  the implementation then avoided, e.g. for programme-export: `produces = "text/csv"` would `406` a
+  JSON `Accept`, the existing `Utils.csv` isn't RFC 4180, and the spec overrides RFC 4180's CRLF
+  (D2008, D2009, D2080; `ProgrammeExportController` cites D2080).
 
 ## 3. Claim log
 
@@ -61,6 +85,10 @@ claimed or skipped, at which tick, and the evidence you held before claiming. Fo
 | acceptance | claimed | 107 | The harness's spec was identical to our copy, and every rule R1-R9 had a decision and a test (`AcceptanceTest`, 13 tests, including two concurrency tests). `examples/acceptance.hurl` green live. About 350 acceptance requests from the harness in our logs, with no 500s. A **live** race test: 5 rounds of 5 ACCEPTED + 5 REJECTED + 2 withdrawals on one talk at once. Every round ended in one allowed state (accept and reject never both won, at most one withdrawal), and the rounds happened to cover all three orders. Still missed check-3/check-5 (see §4) |
 | spring-boot-4 | claimed | 98 | Spec and plan: [workflow/specs/spring-boot-4.md](workflow/specs/spring-boot-4.md), [workflow/plans/spring-boot-4.md](workflow/plans/spring-boot-4.md). 20 pinned behaviours (P1-P20: `UpgradeContractTest`, `UtilsTest#usShortIsByteExact`, `examples/spring-boot-4.hurl`), green on Boot 2.7 before the upgrade and on 4.1.2 / Java 25 after. `verify.sh` green on JDK 25 (96 tests, 7 Hurl files, 137 requests). The production image built locally passed every Hurl file. An independent review agent compared about 140 identical requests against the old and new jars. Deployed `4e7a533`: `/actuator/info` reports `4.1.2` / `25.0.5`, Hurl green against the live URL. Harness after the claim: spring-boot-4 2/2 OK, base features all OK from tick 100 |
 | scheduling | claimed | 136 | Spec decisions in [workflow/specs/scheduling.md](workflow/specs/scheduling.md), plan in [workflow/plans/scheduling.md](workflow/plans/scheduling.md). `SchedulingTest` (17 tests, rules R1-R10, including 4 concurrency tests: one place × 12 talks, one talk × 15 places, a 9-way speaker clash, put racing take-out). `examples/scheduling.hurl` green locally; `verify.sh` green (124 tests, 11 Hurl files). An independent review agent found no race or deadlock and 4 gaps, all fixed. Deployed in `eeb3439` (contains `39f14ce`). Still missed check-1 (see §4) |
+| workshop-registration | claimed | 123 | Spec decisions and PO-1..4 (tick 101) in [workflow/specs/workshop-registration.md](workflow/specs/workshop-registration.md); `WorkshopRegistrationTest` (11 tests); `examples/workshop-registration.hurl`. PO-1 and PO-3 were flagged as the riskiest before claiming (no harness precedent). Still missed check-2 and check-3 (see §4); all 4 checks OK by tick 171. *Evidence held before claiming: to be filled in by the person who claimed.* |
+| programme-export | claimed | 156 | Spec integrated into `DESIGN.md` (D2000–D2086) before planning; decisions and PO-1..4 (tick 140) in [workflow/specs/programme-export.md](workflow/specs/programme-export.md); `ProgrammeExportTest` (10 tests: byte-exact CSV, JSON and CSV rows in the same order); `examples/programme-export.hurl`. PO-3 (`406`) and PO-4 had no harness precedent and were marked to watch. Harness after the claim: 3/3 OK. *Evidence held before claiming: to be filled in by the person who claimed.* |
+| ratings-cr | claimed | 188 | Change request (no new endpoint): decisions and PO-1/PO-2 (tick 171) in [workflow/specs/ratings-cr.md](workflow/specs/ratings-cr.md); `RatingsCrTest` (7 tests, the spec's ties 25/8 → 3.12 and 27/8 → 3.38, trim at 5); old-rounding pins updated. PO-1 said the claim switches the ratings checks to the new rule, so the plan was push → `/health` shows the SHA → claim at once. Harness after the claim: ratings-cr 4/4 OK; ratings check-2/check-4 still `null`. *Evidence held before claiming: to be filled in by the person who claimed.* |
+| submission-cap-cr | not yet claimed | — | Implemented (`SubmissionCapTest`, 11 tests; `examples/submission-cap-cr.hurl`); PO-1..5 in [workflow/specs/submission-cap-cr.md](workflow/specs/submission-cap-cr.md). Co-speakers check-3 has been `null` since its release at tick 180. |
 
 ## 4. What the harness caught that we didn't
 
@@ -120,6 +148,13 @@ docs included: six restarts in 14 minutes, and each container needs ~30 s before
 that hit the swap got no response, in every feature at once. Now `deploy.yml` has `paths-ignore` for
 `*.md`, `workflow/`, `.claude/`, `specs/`, `examples/` and `.github/`, so only code pushes deploy, and
 `harness.sh health` compares with the last *deployable* commit. Code pushes still cost a tick: batch them.
+
+**Tick 136: 24 checks FAULTY at once, across every claimed feature but spring-boot-4.** Every
+transcript stopped on the first `POST /speakers` with no answer (`status: null`). `/health` was `ok`
+on `39f14ce` a minute later while `eeb3439` was still deploying, so the checks most likely hit a
+container swap. Lost points jumped from 31 to 166 between tick 104 and 136. *Why our review missed it:*
+same cause as "every deploy cost a tick" below; two code pushes close together (`39f14ce`,
+`eeb3439`) right before a tick. Everything was OK again by tick 171.
 
 **Caught by us before the harness (no check covered them):**
 - **500 emojis didn't fit a 500-character bio.** `@Size` counts UTF-16 units, and an emoji is two of
@@ -208,6 +243,16 @@ acceptance, where the harness had just rejected `200` for a repeated decision. T
 - **Deploy only what changes the image:** `paths-ignore` in
   [.github/workflows/deploy.yml](.github/workflows/deploy.yml). Docs and process commits stop costing
   availability.
+- **A combined design document as the check document:** [workflow/DESIGN.md](workflow/DESIGN.md).
+  Specs stay untouched inputs; the design document numbers every rule, decision and PO answer
+  (D1000+, never renumbered), records non-functional requirements (D1700+) and cross-cutting rules
+  (D1900+), and lists open questions with a default. The process keeps it current
+  ([workflow/PROCESS.md](workflow/PROCESS.md) step 2c and the skills), so an agent reads one file to
+  see the whole service, and a contradiction between specs shows up as two D-rules that disagree.
+- **A read-only spec watcher:** [workflow/scripts/watch-specs.sh](workflow/scripts/watch-specs.sh)
+  and [poll-specs.sh](workflow/scripts/poll-specs.sh). It never writes the working tree, reports a
+  failed poll as an error instead of "nothing new", keeps a fixed interval, and stops on the first
+  hit so the log ends with the news.
 - **A gate that can't pass on the wrong runtime:** [workflow/scripts/verify.sh](workflow/scripts/verify.sh)
   takes the JDK from `pom.xml` for both the build and the run, cleans first, and checks Maven's exit code.
 
